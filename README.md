@@ -131,6 +131,8 @@ Open a lesson and press **Words**. Each new word is shown with its article, plur
 
 Rate yourself **Again / Hard / Good / Easy**; the button shows when the card will return. A word counts as *learned* once it has passed its short learning steps.
 
+Not in the mood for a card? **Skip** (top right of any study screen) sets it aside for this session only. Nothing is recorded, so it simply comes back next time.
+
 ### 4. Drill what you want
 
 Each lesson has a **Practice** row:
