@@ -66,15 +66,31 @@ export const MultipleChoiceSchema = z
     path: ['correct'],
   });
 
+/** Listening recognition: the learner hears `audio` (German) and picks what it means. */
+export const ListenChooseSchema = z
+  .object({
+    ...base,
+    type: z.literal('listen_choose'),
+    audio: text,
+    prompt: text.optional(),
+    options: z.array(text).min(2),
+    correct: z.number().int().min(0),
+  })
+  .refine((e) => e.correct < e.options.length, {
+    message: 'correct must be a valid index into options',
+    path: ['correct'],
+  });
+
 export const ExerciseSchema = z.discriminatedUnion('type', [
   FillBlankSchema,
   WordOrderSchema,
   TranslateSchema,
   MultipleChoiceSchema,
+  ListenChooseSchema,
 ]);
 export type ExerciseInput = z.infer<typeof ExerciseSchema>;
 export type ExerciseType = ExerciseInput['type'];
-export const EXERCISE_TYPES = ['fill_blank', 'word_order', 'translate', 'multiple_choice'] as const;
+export const EXERCISE_TYPES = ['fill_blank', 'word_order', 'translate', 'multiple_choice', 'listen_choose'] as const;
 
 export const LessonSchema = z.object({
   schema_version: z.number().int().default(SCHEMA_VERSION),

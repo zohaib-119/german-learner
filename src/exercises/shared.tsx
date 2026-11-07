@@ -156,3 +156,32 @@ export function shuffled<T>(items: T[], isSolved?: (order: T[]) => boolean): T[]
   }
   return out;
 }
+
+/** Numbered answer buttons; after an answer the right one turns green and a wrong pick red. */
+export function Choices({
+  options,
+  order,
+  picked,
+  correct,
+  onPick,
+}: {
+  options: string[];
+  order: number[];
+  picked: number | null;
+  correct: number;
+  onPick: (original: number) => void;
+}) {
+  return (
+    <div className="choices">
+      {order.map((orig, pos) => {
+        const state = picked === null ? '' : orig === correct ? 'right' : orig === picked ? 'wrong' : 'dim';
+        return (
+          <button key={orig} className={`choice ${state}`} disabled={picked !== null} onClick={() => onPick(orig)}>
+            <kbd>{pos + 1}</kbd>
+            <span>{options[orig]}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}

@@ -104,6 +104,8 @@ export function exerciseGermanTexts(ex: NormalizedExercise): string[] {
       return [ex.answers[0]!];
     case 'multiple_choice':
       return ex.options;
+    case 'listen_choose':
+      return [ex.audio]; // options are usually the meaning (any language), so only the audio is checked
   }
 }
 

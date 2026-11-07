@@ -1,11 +1,12 @@
-import { Languages, Lightbulb, ListChecks, PenLine, Shuffle, Undo2 } from 'lucide-react';
+import { Headphones, Languages, Lightbulb, ListChecks, PenLine, Shuffle, Undo2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { clean, gradeOrder, gradeText, type GradeResult, type Verdict } from '../core/grading';
 import type { ExerciseRow } from '../db';
+import { player } from '../audio/player';
 import { exerciseSpokenText } from '../audio/texts';
-import { GlossText, SpecialChars } from '../ui/components';
+import { GlossText, PlayCircle, SpeakButton, SpecialChars } from '../ui/components';
 import { useKeys } from '../ui/hooks';
-import { ActionBar, ExerciseFrame, FeedbackPanel, shuffled, type Ex, type ExerciseProps } from './shared';
+import { ActionBar, Choices, ExerciseFrame, FeedbackPanel, shuffled, type Ex, type ExerciseProps } from './shared';
 
 export type { ExerciseContext } from './shared';
 
@@ -170,20 +171,43 @@ function MultipleChoice({ exercise, ctx, onComplete }: ExerciseProps<Ex<'multipl
       <p className="prompt-en big">
         <GlossText text={exercise.prompt} lexicon={ctx.lexicon} />
       </p>
-      <div className="choices">
-        {order.map((orig, pos) => {
-          const state = picked === null ? '' : orig === exercise.correct ? 'right' : orig === picked ? 'wrong' : 'dim';
-          return (
-            <button key={orig} className={`choice ${state}`} disabled={picked !== null} onClick={() => choose(orig)}>
-              <kbd>{pos + 1}</kbd>
-              <span>{exercise.options[orig]}</span>
-            </button>
-          );
-        })}
-      </div>
+      <Choices options={exercise.options} order={order} picked={picked} correct={exercise.correct} onPick={choose} />
       {verdict && (
         <FeedbackPanel verdict={verdict} speak={exerciseSpokenText(exercise)} explanation={exercise.explanation} ctx={ctx}>
           <GlossText text={exercise.options[exercise.correct]!} lexicon={ctx.lexicon} />
+        </FeedbackPanel>
+      )}
+      <ActionBar checked={!!verdict} canCheck={false} hideCheck onCheck={() => {}} onContinue={() => verdict && onComplete(verdict)} />
+    </ExerciseFrame>
+  );
+}
+
+// ---- listen and choose (listening recognition) --------------------------------------------------
+
+function ListenChoose({ exercise, ctx, onComplete }: ExerciseProps<Ex<'listen_choose'>>) {
+  const order = useMemo(() => shuffled(exercise.options.map((_, i) => i)), [exercise]);
+  const [picked, setPicked] = useState<number | null>(null);
+  const verdict: Verdict | null = picked === null ? null : picked === exercise.correct ? 'correct' : 'wrong';
+  const choose = (i: number) => picked === null && setPicked(i);
+
+  // Listening is the point of this exercise, so it always plays regardless of the auto-play setting.
+  useEffect(() => {
+    void player.play(exercise.audio);
+    return () => player.stop();
+  }, [exercise.audio]);
+  useKeys({ ' ': () => void player.play(exercise.audio), ...Object.fromEntries(order.map((orig, pos) => [String(pos + 1), () => choose(orig)])) });
+
+  return (
+    <ExerciseFrame icon={Headphones} label="Listen and choose" hintTexts={[]} ctx={ctx}>
+      <div className="focus">
+        <PlayCircle text={exercise.audio} label="Replay" />
+        <SpeakButton text={exercise.audio} compact />
+      </div>
+      {exercise.prompt && <p className="prompt-en">{exercise.prompt}</p>}
+      <Choices options={exercise.options} order={order} picked={picked} correct={exercise.correct} onPick={choose} />
+      {verdict && (
+        <FeedbackPanel verdict={verdict} speak={exercise.audio} explanation={exercise.explanation} ctx={{ ...ctx, autoplay: false }}>
+          <GlossText text={exercise.audio} lexicon={ctx.lexicon} />
         </FeedbackPanel>
       )}
       <ActionBar checked={!!verdict} canCheck={false} hideCheck onCheck={() => {}} onContinue={() => verdict && onComplete(verdict)} />
@@ -200,6 +224,7 @@ export const exerciseRegistry: Registry = {
   word_order: WordOrder,
   translate: Translate,
   multiple_choice: MultipleChoice,
+  listen_choose: ListenChoose,
 };
 
 export const EXERCISE_LABELS: Record<ExerciseRow['type'], string> = {
@@ -207,6 +232,7 @@ export const EXERCISE_LABELS: Record<ExerciseRow['type'], string> = {
   word_order: 'Put in order',
   translate: 'Translate',
   multiple_choice: 'Choose',
+  listen_choose: 'Listen and choose',
 };
 
 export const EXERCISE_ICONS: Record<ExerciseRow['type'], ComponentType<{ size?: number }>> = {
@@ -214,10 +240,23 @@ export const EXERCISE_ICONS: Record<ExerciseRow['type'], ComponentType<{ size?: 
   word_order: Shuffle,
   translate: Languages,
   multiple_choice: ListChecks,
+  listen_choose: Headphones,
 };
 
 /** Renders the right component for an exercise. Keyed by the caller so state resets between exercises. */
 export function ExerciseView(props: ExerciseProps<ExerciseRow>) {
   const Component = exerciseRegistry[props.exercise.type] as ComponentType<ExerciseProps<ExerciseRow>>;
   return <Component {...props} />;
+}
+
+/** One-line description of an exercise for lists. */
+export function exercisePrompt(ex: ExerciseRow): string {
+  switch (ex.type) {
+    case 'word_order':
+      return ex.prompt_en ?? ex.tokens.join(' · ');
+    case 'listen_choose':
+      return ex.prompt ?? ex.options.join(' / ');
+    default:
+      return ex.prompt;
+  }
 }

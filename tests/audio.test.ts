@@ -66,8 +66,10 @@ describe('lessonTexts', () => {
     const exercises = [
       { type: 'fill_blank', id: 'a', prompt: 'Ich ___ Brot.', answer: 'esse', accept: [] },
       { type: 'multiple_choice', id: 'b', prompt: 'p', options: ['x', 'Ich esse.'], correct: 1 },
+      { type: 'listen_choose', id: 'c', audio: 'Guten Morgen.', options: ['a', 'b'], correct: 0 },
     ] as never;
     expect(lessonTexts({ items, exercises })).toContain('Ich esse Brot.');
     expect(lessonTexts({ items, exercises })).toContain('Ich esse.');
+    expect(lessonTexts({ items, exercises })).toContain('Guten Morgen.');
   });
 });

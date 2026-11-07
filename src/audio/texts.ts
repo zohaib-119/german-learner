@@ -15,6 +15,8 @@ export function exerciseSpokenText(ex: NormalizedExercise): string {
       return ex.answers[0]!;
     case 'multiple_choice':
       return ex.options[ex.correct]!;
+    case 'listen_choose':
+      return ex.audio;
   }
 }
 
