@@ -1,0 +1,61 @@
+schema_version: 1
+id: yt-bakery-01
+title: "Easy German – At the bakery"
+tags: [video, a1, food]
+source: "https://youtube.com/"   # optional note for yourself
+
+items:
+  - kind: noun
+    de: Brot
+    article: das
+    plural: Brote
+    en: bread
+    example: { de: "Ich hätte gern ein Brot.", en: "I would like a loaf of bread." }
+  - kind: noun
+    de: Brötchen
+    article: das
+    plural: Brötchen
+    en: bread roll
+    example: { de: "Zwei Brötchen, bitte.", en: "Two bread rolls, please." }
+  - kind: noun
+    de: Bäckerei
+    article: die
+    plural: Bäckereien
+    en: bakery
+  - kind: verb
+    de: bestellen
+    en: to order
+    forms: { er: bestellt, perfekt: hat bestellt }
+    example: { de: "Ich bestelle einen Kaffee.", en: "I order a coffee." }
+  - kind: phrase
+    de: Ich hätte gern …
+    en: I would like …
+    tts: Ich hätte gern
+
+exercises:
+  - type: fill_blank
+    prompt: "Ich ___ gern ein Brot."
+    answer: hätte
+    accept: [haette]
+    hint: "Konjunktiv II of haben"
+    explanation: "'Ich hätte gern' is the polite way to order."
+
+  - type: word_order
+    prompt_en: "I would like a loaf of bread."
+    tokens: [Ich, hätte, gern, ein, Brot]
+    answers:
+      - "Ich hätte gern ein Brot"
+    explanation: "The conjugated verb sits in position 2 of a main clause."
+
+  - type: translate
+    prompt: "Because I am hungry, I order bread."
+    answers:
+      - "Weil ich Hunger habe, bestelle ich Brot."
+      - "Ich bestelle Brot, weil ich Hunger habe."
+    explanation: "'weil' sends the conjugated verb to the end of its clause."
+
+  - type: multiple_choice
+    prompt: "Which sentence is correct?"
+    options: ["Weil ich bin müde, schlafe ich.", "Weil ich müde bin, schlafe ich."]
+    correct: 1
+    explanation: "Subordinating conjunctions push the verb to the end."
