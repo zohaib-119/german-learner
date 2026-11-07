@@ -1,4 +1,4 @@
-import { ArrowRight, CircleCheck, Lock, X } from 'lucide-react';
+import { ArrowRight, CircleCheck, Lock, SkipForward, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { player } from '../../audio/player';
 import { buildLexicon } from '../../core/vocab';
@@ -54,6 +54,9 @@ export function StudySession({ plan, learning, exitTo }: { plan: SessionPlan; le
     }
   }
 
+  /** Drop the current card from this session only: nothing is recorded, so it simply comes back next time. */
+  const onSkip = () => advance(async (rest) => rest);
+
   const onIntro = (entry: Extract<Entry, { type: 'intro' }>) =>
     advance(
       async (rest, now) => {
@@ -98,6 +101,9 @@ export function StudySession({ plan, learning, exitTo }: { plan: SessionPlan; le
         <span className="study-count" title="Remaining">
           {queue.length}
         </span>
+        <button className="btn ghost sm" title="Skip this card for now" onClick={() => void onSkip()}>
+          <SkipForward size={16} /> Skip
+        </button>
       </header>
       <AudioBanner />
       <main className="study-main">
