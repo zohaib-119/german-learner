@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
+import type { Card } from 'ts-fsrs';
 import type { NormalizedExercise, NormalizedItem, NormalizedLesson } from '../core/importer';
 
 export interface LessonRow {
@@ -8,24 +9,35 @@ export interface LessonRow {
   source?: string | undefined;
   schemaVersion: number;
   enabled: boolean;
+  /** User chose to practise sentences before the word threshold was reached. */
+  sentencesUnlocked?: boolean | undefined;
   importedAt: number;
 }
 export interface ItemRow extends NormalizedItem {
   /** Globally unique: `${lessonId}:${itemId}` */
   uid: string;
   lessonId: string;
+  /** Position in the lesson file, so items are introduced in the order the author wrote them. */
+  order: number;
 }
-export type ExerciseRow = NormalizedExercise & { uid: string; lessonId: string };
+export type ExerciseRow = NormalizedExercise & { uid: string; lessonId: string; order: number };
 
 export interface CardRow {
   id: string; // `${itemUid}#${mode}`
   itemUid: string;
   lessonId: string;
   mode: string;
+  /** Mirrors fsrs.due in ms so it can be indexed. */
   due: number;
-  // FSRS state is stored as plain JSON by the srs module.
-  state: unknown;
+  fsrs: Card;
   lapses: number;
+}
+export interface ExerciseStatRow {
+  id: string; // exercise uid
+  lessonId: string;
+  due: number;
+  fsrs: Card;
+  lastResult?: boolean | undefined;
 }
 export interface ReviewRow {
   seq?: number;
@@ -45,7 +57,7 @@ export class AppDB extends Dexie {
   items!: EntityTable<ItemRow, 'uid'>;
   exercises!: EntityTable<ExerciseRow, 'uid'>;
   cards!: EntityTable<CardRow, 'id'>;
-  exerciseStats!: EntityTable<{ id: string; lessonId: string; due: number; state: unknown; lastResult?: boolean }, 'id'>;
+  exerciseStats!: EntityTable<ExerciseStatRow, 'id'>;
   reviews!: EntityTable<ReviewRow, 'seq'>;
   settings!: EntityTable<SettingRow, 'key'>;
 
@@ -89,10 +101,11 @@ export async function saveLesson(database: AppDB, lesson: NormalizedLesson): Pro
         source: lesson.source,
         schemaVersion: lesson.schema_version,
         enabled: existing?.enabled ?? true,
+        sentencesUnlocked: existing?.sentencesUnlocked,
         importedAt: Date.now(),
       });
 
-      const itemRows: ItemRow[] = lesson.items.map((it) => ({ ...it, uid: `${lesson.id}:${it.id}`, lessonId: lesson.id }));
+      const itemRows: ItemRow[] = lesson.items.map((it, order) => ({ ...it, uid: `${lesson.id}:${it.id}`, lessonId: lesson.id, order }));
       const oldItemUids = (await database.items.where('lessonId').equals(lesson.id).primaryKeys()) as string[];
       const newItemUids = new Set(itemRows.map((r) => r.uid));
       const removed = oldItemUids.filter((u) => !newItemUids.has(u));
@@ -102,7 +115,7 @@ export async function saveLesson(database: AppDB, lesson: NormalizedLesson): Pro
       }
       await database.items.bulkPut(itemRows);
 
-      const exRows: ExerciseRow[] = lesson.exercises.map((ex) => ({ ...ex, uid: `${lesson.id}:${ex.id}`, lessonId: lesson.id }));
+      const exRows: ExerciseRow[] = lesson.exercises.map((ex, order) => ({ ...ex, uid: `${lesson.id}:${ex.id}`, lessonId: lesson.id, order }));
       const oldEx = (await database.exercises.where('lessonId').equals(lesson.id).primaryKeys()) as string[];
       const newEx = new Set(exRows.map((r) => r.uid));
       const removedEx = oldEx.filter((u) => !newEx.has(u));

@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AppDB, deleteLesson, saveLesson } from '../src/db';
 import { importLessonText } from '../src/core/importer';
+import { newCard } from '../src/core/srs';
 
 function lesson(yaml: string) {
   const r = importLessonText(yaml, 't.yaml');
@@ -28,8 +29,8 @@ describe('saveLesson', () => {
   it('re-import keeps cards for unchanged items and drops cards for removed ones', async () => {
     await saveLesson(db, lesson(`id: l1\ntitle: L\nitems:\n  - { de: Hund, en: dog }\n  - { de: Katze, en: cat }\n`));
     await db.cards.bulkPut([
-      { id: 'l1:hund#de_en', itemUid: 'l1:hund', lessonId: 'l1', mode: 'de_en', due: 0, state: {}, lapses: 0 },
-      { id: 'l1:katze#de_en', itemUid: 'l1:katze', lessonId: 'l1', mode: 'de_en', due: 0, state: {}, lapses: 0 },
+      { id: 'l1:hund#de_en', itemUid: 'l1:hund', lessonId: 'l1', mode: 'de_en', due: 0, fsrs: newCard(), lapses: 0 },
+      { id: 'l1:katze#de_en', itemUid: 'l1:katze', lessonId: 'l1', mode: 'de_en', due: 0, fsrs: newCard(), lapses: 0 },
     ]);
     const s = await saveLesson(db, lesson(`id: l1\ntitle: L2\nitems:\n  - { de: Hund, en: dog (edited) }\n`));
     expect(s).toMatchObject({ created: false, removedItems: 1 });
