@@ -162,6 +162,9 @@ kbd {
 .stage-card.is-locked { background: var(--surface-2); box-shadow: none; }
 .stage-head { display: flex; align-items: center; gap: 10px; width: 100%; }
 .stage-head .muted { margin-left: auto; }
+.practice { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px; margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px; }
+.practice-buttons { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.practice-sep { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
 .tab { border: 0; background: none; padding: 10px 14px; font: inherit; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .tab:hover { color: var(--text); }
@@ -317,7 +320,7 @@ select {
 .choice.right { border-color: var(--success); background: var(--success-weak); }
 .choice.wrong { border-color: var(--danger); background: var(--danger-weak); }
 .choice.dim { opacity: 0.55; }
-.choice:disabled { cursor: default; }
+.choice:disabled { cursor: default; color: var(--text); }
 
 .feedback { text-align: left; padding: 14px 16px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px; }
 .feedback.correct { background: var(--success-weak); color: #0b6b35; }

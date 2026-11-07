@@ -1,4 +1,4 @@
-import { ChevronLeft, Layers, Lightbulb, Lock, LockOpen, MessageSquareText, Play, Trash2 } from 'lucide-react';
+import { BookOpen, ChevronLeft, Headphones, Keyboard, Layers, Lightbulb, Lock, LockOpen, MessageSquareText, Play, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { spokenText } from '../audio/texts';
 import { exerciseSpokenText } from '../audio/texts';
@@ -6,7 +6,7 @@ import { isLearned, State } from '../core/srs';
 import { unlockSentences } from '../core/session';
 import { db, deleteLesson } from '../db';
 import { UNLOCK_RATIO, cardId, getLessonProgress, isWordItem } from '../db/progress';
-import { EXERCISE_ICONS, EXERCISE_LABELS } from '../exercises';
+import { EXERCISE_ICONS, EXERCISE_LABELS, exercisePrompt } from '../exercises';
 import { Chip, EmptyState, ProgressBar, SpeakButton, Switch, Word } from './components';
 import { href, navigate, useAsync } from './hooks';
 
@@ -130,6 +130,26 @@ export function LessonDetail({ lessonId }: { lessonId: string }) {
         </div>
       </section>
 
+      <section className="practice">
+        <h2>Practice</h2>
+        <div className="practice-buttons">
+          <a className={`btn ${words.seen === 0 ? 'disabled' : ''}`} aria-disabled={words.seen === 0} href={href('study/reading', { lesson: lessonId })}>
+            <BookOpen size={16} /> Reading {progress.due.reading > 0 && <span className="badge">{progress.due.reading}</span>}
+          </a>
+          <a className={`btn ${words.seen === 0 ? 'disabled' : ''}`} aria-disabled={words.seen === 0} href={href('study/listening', { lesson: lessonId })}>
+            <Headphones size={16} /> Listening {progress.due.listening > 0 && <span className="badge">{progress.due.listening}</span>}
+          </a>
+          <span className="practice-sep" />
+          <a
+            className={`btn ${words.learned === 0 && progress.due.spelling === 0 ? 'disabled' : ''}`}
+            aria-disabled={words.learned === 0 && progress.due.spelling === 0}
+            href={href('study/spelling', { lesson: lessonId })}
+          >
+            <Keyboard size={16} /> Spelling {progress.due.spelling > 0 && <span className="badge">{progress.due.spelling}</span>} <Chip>Optional</Chip>
+          </a>
+        </div>
+      </section>
+
       <div className="tabs" role="tablist">
         {(
           [
@@ -194,7 +214,7 @@ export function LessonDetail({ lessonId }: { lessonId: string }) {
           <div className="list">
             {exercises.map((ex) => {
               const Icon = EXERCISE_ICONS[ex.type];
-              const prompt = ex.type === 'word_order' ? (ex.prompt_en ?? ex.tokens.join(' · ')) : ex.prompt;
+              const prompt = exercisePrompt(ex);
               return (
                 <div key={ex.uid} className="row-item">
                   <span className="type-icon" title={EXERCISE_LABELS[ex.type]}>
