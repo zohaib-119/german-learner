@@ -8,6 +8,22 @@ One file = one lesson. Importing a file whose lesson `id` already exists **updat
 
 ---
 
+## How words and sentences work together
+
+The app assumes you know **no** vocabulary beyond very basic function words. So each lesson has two stages:
+
+1. **Words** – every item that is not `kind: sentence` (nouns, verbs, adjectives, phrases …) is learned first, in the order you list them (put the most useful first).
+2. **Sentences** – example sentences, `kind: sentence` items and all `exercises` unlock once **80 %** of the words are learned (you can also unlock manually).
+
+**Authoring rule: every content word used in a sentence or exercise must also be an item.**
+Articles, pronouns and basic auxiliaries (ich, du, der, die, ein, und, ist, hat, möchte …) are exempt. When you import, the app warns:
+`Words used in sentences but missing from items: Kaffee, müde …`. Add those words as items.
+
+Inflected forms are recognised automatically for regular words (plural, `-e/-st/-t/-en`, `ge…t`, adjective endings).
+For irregular forms, list them so they are found: `forms: { er: isst, perfekt: hat gegessen }`.
+
+---
+
 ## 1. YAML / JSON lesson
 
 ### Top level
@@ -197,7 +213,7 @@ bestellen,to order,verb,,,"Ich bestelle einen Kaffee.","I order a coffee."
    - updates changed items/exercises in place,
    - keeps study progress for items whose id is unchanged,
    - removes items/exercises no longer in the file (and their progress).
-4. If a Piper/Edge engine is selected and `tts-service` is running, audio for all `de` texts (or `tts` overrides) and example sentences is generated in advance.
+4. If `tts-service` is running, audio for all words (or `tts` overrides), example sentences and exercise answers is generated in advance with the selected voice (Piper or Edge).
 
 ---
 
@@ -210,7 +226,7 @@ bestellen,to order,verb,,,"Ich bestelle einen Kaffee.","I order a coffee."
 >
 > Requirements:
 > - `id`: `<short-stable-id>`, `title`: `<title>`, `tags`: `[<tags>]`, level A1/A2.
-> - `items`: the ~`<N>` most useful words/phrases from the material. For every noun give `article` and `plural`. Add one short, natural `example` sentence (`de` + `en`) per item. Use `kind` correctly. Use `tts` only where `de` contains symbols such as `…` or `(`.
+> - `items`: the ~`<N>` most useful words/phrases from the material, most basic first. **Every content word (noun, verb, adjective, adverb) that appears in any example sentence or exercise must also be its own item**; only articles, pronouns and basic auxiliaries may be left out. For irregular verbs add `forms`. For every noun give `article` and `plural`. Add one short, natural `example` sentence (`de` + `en`) per item. Use `kind` correctly. Use `tts` only where `de` contains symbols such as `…` or `(`.
 > - `exercises`: about `<M>` exercises mixing `fill_blank`, `word_order`, `translate`, `multiple_choice`, focused on `<grammar focus, e.g. weil / dass verb-final, V2 word order>`. Every exercise needs a short `explanation` in English. For `word_order` and `translate`, list **all** natural correct variants in `answers`.
 > - Quote every string that contains a comma, colon or `#`. Use spaces for indentation. Double-check that `multiple_choice.correct` is a 0-based index and that every `fill_blank.prompt` contains `___`.
 > - Do not invent vocabulary that is not appropriate for the level; keep sentences simple and correct.
