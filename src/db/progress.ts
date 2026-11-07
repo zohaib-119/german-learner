@@ -5,7 +5,10 @@ import type { AppDB, CardRow, ItemRow, LessonRow } from '.';
 export const UNLOCK_RATIO = 0.8;
 
 export type CardMode = 'de_en' | 'listen_en' | 'en_de' | 'listen_type' | 'ex_listen';
-export const WORD_MODES: CardMode[] = ['de_en', 'listen_en', 'en_de', 'listen_type'];
+/** Main path: recognise a word by reading it (de_en) and by hearing it (listen_en). */
+export const RECOGNITION_MODES: CardMode[] = ['de_en', 'listen_en'];
+/** Optional, separate practice: typing a word (spelling). Never part of the Words stage or Review. */
+export const SPELLING_MODES: CardMode[] = ['en_de', 'listen_type'];
 
 /** Words (nouns, verbs, phrases …) are learned first; whole sentences belong to the sentence stage. */
 export const isWordItem = (it: Pick<ItemRow, 'kind'>): boolean => it.kind !== 'sentence';
@@ -17,7 +20,8 @@ export interface LessonProgress {
   words: { total: number; seen: number; learned: number };
   sentences: { total: number; seen: number };
   exercises: { total: number; seen: number };
-  due: { words: number; sentences: number };
+  /** `words` = reading + listening recognition cards due. Spelling is counted separately. */
+  due: { words: number; reading: number; listening: number; spelling: number; sentences: number };
   unlocked: boolean;
 }
 
@@ -40,14 +44,20 @@ export function computeProgress(
     return !!c && isLearned(c.fsrs);
   }).length;
 
-  let dueWords = 0;
+  let dueReading = 0;
+  let dueListening = 0;
+  let dueSpelling = 0;
   let dueSentences = 0;
   for (const c of cards) {
     if (c.due > now) continue;
     const it = itemByUid.get(c.itemUid);
     if (!it) continue;
-    if (isWordItem(it) && c.mode !== 'ex_listen') dueWords++;
-    else dueSentences++;
+    if (SPELLING_MODES.includes(c.mode as CardMode)) {
+      if (isWordItem(it)) dueSpelling++;
+    } else if (isWordItem(it) && c.mode !== 'ex_listen') {
+      if (c.mode === 'de_en') dueReading++;
+      else dueListening++;
+    } else dueSentences++;
   }
   dueSentences += stats.filter((s) => s.due <= now).length;
 
@@ -68,7 +78,7 @@ export function computeProgress(
         exampleItems.filter((i) => (byId.get(cardId(i.uid, 'ex_listen'))?.fsrs.reps ?? 0) > 0).length,
     },
     exercises: { total: exerciseCount, seen: stats.length },
-    due: { words: dueWords, sentences: dueSentences },
+    due: { words: dueReading + dueListening, reading: dueReading, listening: dueListening, spelling: dueSpelling, sentences: dueSentences },
     unlocked,
   };
 }

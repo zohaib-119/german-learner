@@ -22,7 +22,7 @@ export function App() {
 
   // Study sessions are full screen, without the app chrome.
   if (section === 'study') {
-    const stage = (['words', 'sentences', 'review'].includes(arg ?? '') ? arg : 'review') as Stage;
+    const stage = (['words', 'reading', 'listening', 'spelling', 'sentences', 'review'].includes(arg ?? '') ? arg : 'review') as Stage;
     const lessonId = route.query.get('lesson');
     // Keyed so moving between sessions (e.g. words → sentences) always starts fresh.
     return <StudyRoute key={`${stage}:${lessonId}`} stage={stage} lessonId={lessonId} />;

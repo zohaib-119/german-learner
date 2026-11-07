@@ -27,7 +27,7 @@ export function StudyRoute({ stage, lessonId }: { stage: Stage; lessonId: string
           </button>
         </header>
         <main className="study-main">
-          <EmptyState icon={data.locked ? <Lock size={40} /> : <CircleCheck size={40} />} title={data.locked ? 'Sentences are locked' : 'All caught up'}>
+          <EmptyState icon={data.locked ? <Lock size={40} /> : <CircleCheck size={40} />} title={data.locked ? 'Sentences are locked' : stage === 'words' || stage === 'review' ? 'All caught up' : 'Nothing to practise yet'}>
             <button className="btn primary" onClick={() => navigate(exitTo)}>
               Back
             </button>

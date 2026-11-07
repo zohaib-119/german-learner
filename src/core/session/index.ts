@@ -1,14 +1,32 @@
 import type { AppDB, CardRow, ExerciseRow, ExerciseStatRow, ItemRow } from '../../db';
-import { UNLOCK_RATIO, WORD_MODES, cardId, getLessonProgress, isWordItem, type CardMode } from '../../db/progress';
-import { State, newCard, review, type Grade } from '../srs';
+import { RECOGNITION_MODES, SPELLING_MODES, UNLOCK_RATIO, cardId, getLessonProgress, isWordItem, type CardMode } from '../../db/progress';
+import { isLearned, newCard, review, State, type Grade } from '../srs';
 
-export type Stage = 'words' | 'sentences' | 'review';
+/**
+ * words      – new words + reading and listening recognition (the main path)
+ * reading    – drill: see the German word, recall the meaning
+ * listening  – drill: hear the word, recall the meaning
+ * spelling   – optional drill: type words you have already learned
+ * sentences  – example sentences, sentence items and exercises (after the word threshold)
+ * review     – everything due across lessons, except spelling
+ */
+export type Stage = 'words' | 'reading' | 'listening' | 'spelling' | 'sentences' | 'review';
+
+/** Which cards of *word* items each stage may show. */
+const WORD_CARD_MODES: Record<Stage, CardMode[]> = {
+  words: RECOGNITION_MODES,
+  reading: ['de_en'],
+  listening: ['listen_en'],
+  spelling: SPELLING_MODES,
+  sentences: [],
+  review: RECOGNITION_MODES,
+};
+const DRILLS: Stage[] = ['reading', 'listening', 'spelling'];
+/** A drill session fills up to this many cards, using not-yet-due cards if needed. */
+export const DRILL_SIZE = 12;
 
 /** How far ahead (minutes) a card may come due and still be shown again within the same session. */
 export const HORIZON_MIN = 15;
-/** Production drills (typing) appear this long after the recognition card graduates. */
-const PRODUCTION_DELAY_MIN = 10;
-
 export type Entry =
   | { key: string; type: 'intro'; item: ItemRow }
   | { key: string; type: 'card'; mode: CardMode; item: ItemRow; card: CardRow }
@@ -72,19 +90,20 @@ export async function buildSession(database: AppDB, opts: BuildOptions): Promise
       if (!progress?.unlocked) continue;
     }
 
-    const wantsWords = opts.stage !== 'sentences';
-    const wantsSentences = opts.stage !== 'words';
+    const wantsSentences = opts.stage === 'sentences' || opts.stage === 'review';
+    const wordModes = WORD_CARD_MODES[opts.stage];
+    const lessonStart = entries.length;
+    const wanted = (c: CardRow): boolean => {
+      const it = itemByUid.get(c.itemUid);
+      if (!it) return false;
+      const mode = c.mode as CardMode;
+      if (SPELLING_MODES.includes(mode)) return isWordItem(it) && wordModes.includes(mode); // spelling only in its own drill
+      if (isWordItem(it) && mode !== 'ex_listen') return wordModes.includes(mode);
+      return wantsSentences;
+    };
 
     // 1. Everything that is due.
-    const dueCards = cards
-      .filter((c) => c.due <= nowMs)
-      .filter((c) => {
-        const it = itemByUid.get(c.itemUid);
-        if (!it) return false;
-        const isWordCard = isWordItem(it) && c.mode !== 'ex_listen';
-        return isWordCard ? wantsWords : wantsSentences;
-      })
-      .sort((a, b) => a.due - b.due);
+    const dueCards = cards.filter((c) => c.due <= nowMs && wanted(c)).sort((a, b) => a.due - b.due);
     for (const c of dueCards) {
       entries.push({ key: c.id, type: 'card', mode: c.mode as CardMode, item: itemByUid.get(c.itemUid)!, card: c });
     }
@@ -93,6 +112,32 @@ export async function buildSession(database: AppDB, opts: BuildOptions): Promise
         const st = statById.get(ex.uid);
         if (st && st.due <= nowMs) entries.push({ key: ex.uid, type: 'exercise', exercise: ex, stat: st });
       }
+    }
+
+    // Drills: top up with spelling cards for learned words, then with the soonest not-yet-due cards.
+    if (DRILLS.includes(opts.stage)) {
+      const count = () => entries.length - lessonStart;
+      if (opts.stage === 'spelling') {
+        for (const it of items.filter(isWordItem)) {
+          const recognised = cardById.get(cardId(it.uid, 'de_en'));
+          if (!recognised || !isLearned(recognised.fsrs)) continue;
+          for (const mode of SPELLING_MODES) {
+            if (count() >= DRILL_SIZE) break;
+            if (cardById.has(cardId(it.uid, mode))) continue;
+            const card = makeCard(it, mode, now);
+            await database.cards.put(card);
+            cardById.set(card.id, card);
+            entries.push({ key: card.id, type: 'card', mode, item: it, card });
+          }
+        }
+      }
+      const queued = new Set(entries.map((e) => e.key));
+      const upcoming = cards.filter((c) => c.due > nowMs && wanted(c) && !queued.has(c.id)).sort((a, b) => a.due - b.due);
+      for (const c of upcoming) {
+        if (count() >= DRILL_SIZE) break;
+        entries.push({ key: c.id, type: 'card', mode: c.mode as CardMode, item: itemByUid.get(c.itemUid)!, card: c });
+      }
+      continue;
     }
 
     // 2. New material, capped per session. Cards created but never answered count against the cap.
@@ -116,21 +161,20 @@ export async function buildSession(database: AppDB, opts: BuildOptions): Promise
           slots--;
         }
       }
-      for (const it of items.filter((i) => isWordItem(i) && i.example?.de)) {
-        if (slots <= 0) break;
-        if (!cardById.has(cardId(it.uid, 'ex_listen'))) {
-          const card = makeCard(it, 'ex_listen', now);
-          await database.cards.put(card);
-          entries.push({ key: card.id, type: 'card', mode: 'ex_listen', item: it, card });
-          slots--;
-        }
+      // Share the remaining slots between example sentences and exercises, so exercises are never
+      // starved behind a long list of examples; unused slots go to whichever has more left.
+      const newExamples = items.filter((i) => isWordItem(i) && i.example?.de && !cardById.has(cardId(i.uid, 'ex_listen')));
+      const newExercises = exercises.filter((ex) => !statById.has(ex.uid));
+      let nExamples = Math.min(newExamples.length, Math.ceil(slots / 2));
+      const nExercises = Math.min(newExercises.length, slots - nExamples);
+      nExamples = Math.min(newExamples.length, slots - nExercises);
+      for (const it of newExamples.slice(0, nExamples)) {
+        const card = makeCard(it, 'ex_listen', now);
+        await database.cards.put(card);
+        entries.push({ key: card.id, type: 'card', mode: 'ex_listen', item: it, card });
       }
-      for (const ex of exercises) {
-        if (slots <= 0) break;
-        if (!statById.has(ex.uid)) {
-          entries.push({ key: ex.uid, type: 'exercise', exercise: ex, stat: null });
-          slots--;
-        }
+      for (const ex of newExercises.slice(0, nExercises)) {
+        entries.push({ key: ex.uid, type: 'exercise', exercise: ex, stat: null });
       }
     }
   }
@@ -138,7 +182,7 @@ export async function buildSession(database: AppDB, opts: BuildOptions): Promise
   return {
     stage: opts.stage,
     lessonId: opts.lessonId,
-    entries: opts.stage === 'review' ? shuffle(entries) : entries,
+    entries: opts.stage === 'review' || DRILLS.includes(opts.stage) ? shuffle(entries) : entries,
     items: allItems,
   };
 }
@@ -154,36 +198,22 @@ export async function introduceItem(database: AppDB, item: ItemRow, now = new Da
 
 export interface CardReviewResult {
   card: CardRow;
-  /** Production (typing) cards created because recognition just graduated. */
-  spawned: CardRow[];
 }
 
 export async function applyCardReview(
   database: AppDB,
   card: CardRow,
-  item: ItemRow,
   rating: Grade,
   ms: number,
   now = new Date(),
 ): Promise<CardReviewResult> {
   const next = review(card.fsrs, rating, now);
   const updated: CardRow = { ...card, fsrs: next, due: next.due.getTime(), lapses: next.lapses };
-  const spawned: CardRow[] = [];
   await database.transaction('rw', database.cards, database.reviews, async () => {
     await database.cards.put(updated);
     await database.reviews.add({ cardId: card.id, ts: now.getTime(), rating, ms, mode: card.mode });
-    if (card.mode === 'de_en' && card.fsrs.state !== State.Review && next.state === State.Review) {
-      const due = new Date(now.getTime() + PRODUCTION_DELAY_MIN * 60_000);
-      for (const mode of ['en_de', 'listen_type'] as CardMode[]) {
-        if (!(await database.cards.get(cardId(item.uid, mode)))) {
-          const c = makeCard(item, mode, due);
-          await database.cards.put(c);
-          spawned.push(c);
-        }
-      }
-    }
   });
-  return { card: updated, spawned };
+  return { card: updated };
 }
 
 export async function applyExerciseReview(
@@ -222,4 +252,4 @@ export function requeue<T>(queue: T[], entry: T, dueMs: number, nowMs: number, g
   return insertAt(queue, [{ entry, position: gap }]);
 }
 
-export { UNLOCK_RATIO, WORD_MODES };
+export { UNLOCK_RATIO };

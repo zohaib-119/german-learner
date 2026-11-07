@@ -12,7 +12,7 @@ import { AudioBanner, ProgressBar } from '../components';
 import { href, navigate, useAsync } from '../hooks';
 import { FlipView, IntroView, TypeView, type FlipMode } from './views';
 
-const STAGE_TITLE = { words: 'Words', sentences: 'Sentences', review: 'Review' } as const;
+const STAGE_TITLE = { words: 'Words', reading: 'Reading', listening: 'Listening', spelling: 'Spelling', sentences: 'Sentences', review: 'Review' } as const;
 
 export function StudySession({ plan, learning, exitTo }: { plan: SessionPlan; learning: LearningSettings; exitTo: string }) {
   const [queue, setQueue] = useState<Entry[]>(plan.entries);
@@ -70,11 +70,8 @@ export function StudySession({ plan, learning, exitTo }: { plan: SessionPlan; le
   const onCard = (entry: Extract<Entry, { type: 'card' }>, rating: Grade) =>
     advance(
       async (rest, now) => {
-        const res = await applyCardReview(db, entry.card, entry.item, rating, Date.now() - shownAt.current, now);
-        let next = requeue(rest, { ...entry, card: res.card } as Entry, res.card.due, now.getTime());
-        const spawned = res.spawned.map((c) => ({ key: c.id, type: 'card', mode: c.mode as CardMode, item: entry.item, card: c }) as Entry);
-        next = insertAt(next, spawned.map((e) => ({ entry: e, position: next.length })));
-        return next;
+        const res = await applyCardReview(db, entry.card, rating, Date.now() - shownAt.current, now);
+        return requeue(rest, { ...entry, card: res.card } as Entry, res.card.due, now.getTime());
       },
       { correct: rating >= Rating.Good },
     );

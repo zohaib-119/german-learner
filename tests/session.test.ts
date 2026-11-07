@@ -37,13 +37,11 @@ async function learn(uid: string) {
   await introduceItem(db, item, t0);
   let card = (await db.cards.get(`${uid}#de_en`))!;
   let now = t0;
-  let out;
   for (let i = 0; i < 3 && card.fsrs.state !== State.Review; i++) {
-    out = await applyCardReview(db, card, item, Rating.Good, 1000, now);
-    card = out.card;
+    card = (await applyCardReview(db, card, Rating.Good, 1000, now)).card;
     now = new Date(card.due);
   }
-  return { card, spawned: out?.spawned ?? [] };
+  return { card };
 }
 
 describe('word stage', () => {
@@ -63,11 +61,54 @@ describe('word stage', () => {
     expect(plan.entries.filter((e) => e.type === 'card')).toHaveLength(2);
   });
 
-  it('graduating recognition spawns typing cards due ~10 minutes later', async () => {
-    const { card, spawned } = await learn('l1:brot');
+  it('learning a word creates only reading + listening cards, never spelling cards', async () => {
+    const { card } = await learn('l1:brot');
     expect(card.fsrs.state).toBe(State.Review);
-    expect(spawned.map((c) => c.mode).sort()).toEqual(['en_de', 'listen_type']);
-    expect(spawned[0]!.due).toBeGreaterThan(t0.getTime());
+    expect((await db.cards.toArray()).map((c) => c.mode).sort()).toEqual(['de_en', 'listen_en']);
+  });
+});
+
+describe('practice modes', () => {
+  const later = new Date(t0.getTime() + 3 * 24 * 3600_000);
+
+  it('reading and listening drills only contain their own card type', async () => {
+    await learn('l1:brot');
+    const reading = await buildSession(db, { stage: 'reading', lessonId: 'l1', newLimit: 8, now: later });
+    expect(reading.entries.map((e) => e.key)).toEqual(['l1:brot#de_en']);
+    const listening = await buildSession(db, { stage: 'listening', lessonId: 'l1', newLimit: 8, now: later });
+    expect(listening.entries.map((e) => e.key)).toEqual(['l1:brot#listen_en']);
+    // drills never introduce new words
+    expect((await buildSession(db, { stage: 'reading', lessonId: 'l1', newLimit: 8, now: later })).entries.some((e) => e.type === 'intro')).toBe(false);
+  });
+
+  it('drills can practise ahead when nothing is due yet', async () => {
+    await learn('l1:brot');
+    const plan = await buildSession(db, { stage: 'reading', lessonId: 'l1', newLimit: 8, now: t0 });
+    expect(plan.entries.map((e) => e.key)).toEqual(['l1:brot#de_en']);
+  });
+
+  it('spelling is built on demand from learned words only', async () => {
+    const empty = await buildSession(db, { stage: 'spelling', lessonId: 'l1', newLimit: 8, now: t0 });
+    expect(empty.entries).toHaveLength(0); // nothing learned yet
+    await introduceItem(db, (await db.items.get('l1:kaese'))!, t0); // introduced but not learned
+    expect((await buildSession(db, { stage: 'spelling', lessonId: 'l1', newLimit: 8, now: t0 })).entries).toHaveLength(0);
+
+    await learn('l1:brot');
+    const plan = await buildSession(db, { stage: 'spelling', lessonId: 'l1', newLimit: 8, now: later });
+    expect(plan.entries.map((e) => e.key).sort()).toEqual(['l1:brot#en_de', 'l1:brot#listen_type']);
+  });
+
+  it('spelling cards stay out of the words stage, review and due counts', async () => {
+    await learn('l1:brot');
+    await buildSession(db, { stage: 'spelling', lessonId: 'l1', newLimit: 8, now: later }); // creates the cards, due now
+    const progress = (await getLessonProgress(db, 'l1', later.getTime()))!;
+    expect(progress.due.spelling).toBe(2);
+    expect(progress.due.words).toBe(progress.due.reading + progress.due.listening);
+    const review = await buildSession(db, { stage: 'review', newLimit: 0, now: later });
+    expect(review.entries.every((e) => e.type !== 'card' || (e.mode !== 'en_de' && e.mode !== 'listen_type'))).toBe(true);
+    const words = await buildSession(db, { stage: 'words', lessonId: 'l1', newLimit: 0, now: later });
+    expect(words.entries.every((e) => e.type !== 'card' || (e.mode !== 'en_de' && e.mode !== 'listen_type'))).toBe(true);
+    expect((await getOverview(db, later.getTime())).dueTotal).toBe(progress.due.words + progress.due.sentences);
   });
 });
 
@@ -107,6 +148,24 @@ describe('sentence gate', () => {
     const r = importLessonText(LESSON, 't.yaml');
     if (r.ok) await saveLesson(db, r.lesson);
     expect((await db.lessons.get('l1'))!.sentencesUnlocked).toBe(true);
+  });
+});
+
+describe('sentence stage slots', () => {
+  it('shares new slots between example sentences and exercises', async () => {
+    const many = new AppDB(`many-${n++}`);
+    const items = Array.from({ length: 5 }, (_, i) => `  - { kind: noun, de: Wort${i}, en: w${i}, example: { de: "Satz ${i}.", en: s${i} } }`).join('\n');
+    const exs = Array.from({ length: 4 }, (_, i) => `  - { type: translate, prompt: p${i}, answers: [a${i}] }`).join('\n');
+    const r = importLessonText(`id: m\ntitle: M\nitems:\n${items}\nexercises:\n${exs}\n`, 'm.yaml');
+    if (!r.ok) throw new Error(r.errors.join());
+    await saveLesson(many, r.lesson);
+    await unlockSentences(many, 'm');
+    const plan = await buildSession(many, { stage: 'sentences', lessonId: 'm', newLimit: 4, now: t0 });
+    expect(plan.entries.filter((e) => e.type === 'card')).toHaveLength(2);
+    expect(plan.entries.filter((e) => e.type === 'exercise')).toHaveLength(2);
+    // when one kind runs out, the other uses the spare slots
+    const few = await buildSession(many, { stage: 'sentences', lessonId: 'm', newLimit: 20, now: t0 });
+    expect(few.entries).toHaveLength(9);
   });
 });
 
