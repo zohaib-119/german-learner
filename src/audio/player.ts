@@ -1,6 +1,7 @@
 import type { EngineId } from './engine';
 import { speakWithFallback } from './fallback';
 import { buildChain, getAudioSettings } from './settings';
+import { audioStatus } from './status';
 
 export interface PlayOptions {
   slow?: boolean;
@@ -12,7 +13,8 @@ export interface PlayOptions {
 
 /**
  * Single shared player: starting new audio cancels whatever is currently playing.
- * Resolves with the engine that was used (so the UI can show which one actually spoke).
+ * Never throws; failures are published through `audioStatus` so the UI can show one notice.
+ * Resolves with the engine that spoke, or null when nothing played.
  */
 class Player {
   private controller: AbortController | null = null;
@@ -26,13 +28,16 @@ class Player {
     this.stop();
     const controller = new AbortController();
     this.controller = controller;
-    const chain = buildChain(await getAudioSettings());
     let used: EngineId | null = null;
     try {
+      const chain = buildChain(await getAudioSettings());
       for (let i = 0; i < repeat && !controller.signal.aborted; i++) {
         used = await speakWithFallback(chain, text, { rate: slow ? 0.75 : 1, signal: controller.signal });
+        audioStatus.set(null);
         if (i < repeat - 1) await sleep(gapMs, controller.signal);
       }
+    } catch (e) {
+      if (!controller.signal.aborted) audioStatus.set(e instanceof Error ? e.message : String(e));
     } finally {
       if (this.controller === controller) this.controller = null;
     }

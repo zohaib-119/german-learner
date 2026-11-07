@@ -1,15 +1,16 @@
+import { TTS_URL } from './config';
 import type { EngineId, SpeakOptions, TtsEngine } from './engine';
 
 export interface ServiceHealth {
   ok: boolean;
-  engines: Record<'piper' | 'edge', { available: boolean; voices: string[]; default: string }>;
+  engines: Record<EngineId, { available: boolean; voices: string[]; default: string }>;
   cached_files: number;
 }
 
 /** Fetch /health with a short timeout. Returns null when the service is not running. */
-export async function fetchHealth(baseUrl: string, timeoutMs = 1500): Promise<ServiceHealth | null> {
+export async function fetchHealth(timeoutMs = 1500): Promise<ServiceHealth | null> {
   try {
-    const r = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(timeoutMs) });
+    const r = await fetch(`${TTS_URL}/health`, { signal: AbortSignal.timeout(timeoutMs) });
     return r.ok ? ((await r.json()) as ServiceHealth) : null;
   } catch {
     return null;
@@ -18,27 +19,23 @@ export async function fetchHealth(baseUrl: string, timeoutMs = 1500): Promise<Se
 
 /** Piper or edge-tts via the local tts-service. The browser HTTP cache plus the server's disk cache make repeats free. */
 export class ServiceEngine implements TtsEngine {
-  readonly id: EngineId;
   readonly label: string;
 
   constructor(
-    kind: 'piper' | 'edge',
-    private baseUrl: string,
+    readonly id: EngineId,
     private voice?: string,
   ) {
-    this.id = kind;
-    this.label = kind === 'piper' ? 'Piper (local, offline)' : 'Edge neural (via service, online)';
+    this.label = id === 'piper' ? 'Piper' : 'Edge';
   }
 
   url(text: string): string {
     const p = new URLSearchParams({ text, engine: this.id });
     if (this.voice) p.set('voice', this.voice);
-    return `${this.baseUrl}/tts?${p}`;
+    return `${TTS_URL}/tts?${p}`;
   }
 
   async isAvailable(): Promise<boolean> {
-    const h = await fetchHealth(this.baseUrl);
-    return !!h?.engines[this.id as 'piper' | 'edge']?.available;
+    return !!(await fetchHealth())?.engines[this.id]?.available;
   }
 
   async speak(text: string, opts: SpeakOptions = {}): Promise<void> {
@@ -59,7 +56,7 @@ export class ServiceEngine implements TtsEngine {
       };
       audio.onerror = () => {
         cleanup();
-        reject(new Error(`could not load audio from ${this.baseUrl} (is tts-service running?)`));
+        reject(new Error('could not load audio'));
       };
       opts.signal?.addEventListener(
         'abort',
@@ -85,7 +82,7 @@ export class ServiceEngine implements TtsEngine {
       while (next < unique.length && !signal?.aborted) {
         const text = unique[next++]!;
         const r = await fetch(this.url(text), signal ? { signal } : {});
-        if (!r.ok) throw new Error(`tts-service returned ${r.status} for "${text}"`);
+        if (!r.ok) throw new Error(`tts-service returned ${r.status}`);
         await r.arrayBuffer();
         onProgress?.(++done, unique.length);
       }

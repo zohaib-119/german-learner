@@ -1,4 +1,4 @@
-export type EngineId = 'webspeech' | 'piper' | 'edge';
+export type EngineId = 'piper' | 'edge';
 
 export interface SpeakOptions {
   /** 1 = normal, 0.75 = slow. */
@@ -10,18 +10,18 @@ export interface SpeakOptions {
 export interface TtsEngine {
   readonly id: EngineId;
   readonly label: string;
-  /** Cheap-ish check whether this engine can currently produce German audio. */
+  /** Whether this engine can currently produce German audio. */
   isAvailable(): Promise<boolean>;
   /** Resolves when playback ends or is aborted; rejects if audio could not be produced. */
   speak(text: string, opts?: SpeakOptions): Promise<void>;
-  /** Optional: generate/cache audio ahead of time. Engines without a cache omit this. */
+  /** Generate/cache audio ahead of time. */
   prepare?(texts: string[], onProgress?: (done: number, total: number) => void, signal?: AbortSignal): Promise<void>;
 }
 
 export class NoAudioError extends Error {
   constructor(public readonly causes: { engine: EngineId; error: unknown }[]) {
     super(
-      'No audio engine could play this: ' +
+      'Audio unavailable. Start the TTS service (npm run tts). ' +
         causes.map((c) => `${c.engine}: ${c.error instanceof Error ? c.error.message : String(c.error)}`).join('; '),
     );
     this.name = 'NoAudioError';

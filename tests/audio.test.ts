@@ -20,7 +20,7 @@ function fake(id: EngineId, impl: (text: string, opts: SpeakOptions) => Promise<
 describe('speakWithFallback', () => {
   it('uses the first engine when it works', async () => {
     const a = fake('piper', async () => {});
-    const b = fake('webspeech', async () => {});
+    const b = fake('edge', async () => {});
     expect(await speakWithFallback([a, b], 'Hallo')).toBe('piper');
     expect(b.calls).toEqual([]);
   });
@@ -29,17 +29,17 @@ describe('speakWithFallback', () => {
     const a = fake('piper', async () => {
       throw new Error('service down');
     });
-    const b = fake('webspeech', async () => {});
-    expect(await speakWithFallback([a, b], 'Hallo')).toBe('webspeech');
+    const b = fake('edge', async () => {});
+    expect(await speakWithFallback([a, b], 'Hallo')).toBe('edge');
   });
 
   it('throws NoAudioError listing every cause when all fail', async () => {
     const boom = (m: string) => async () => {
       throw new Error(m);
     };
-    const err = await speakWithFallback([fake('piper', boom('x')), fake('webspeech', boom('y'))], 'Hi').catch((e) => e);
+    const err = await speakWithFallback([fake('piper', boom('x')), fake('edge', boom('y'))], 'Hi').catch((e) => e);
     expect(err).toBeInstanceOf(NoAudioError);
-    expect(err.message).toMatch(/piper: x.*webspeech: y/);
+    expect(err.message).toMatch(/piper: x.*edge: y/);
   });
 
   it('does not try the next engine after the caller aborted', async () => {
@@ -48,7 +48,7 @@ describe('speakWithFallback', () => {
       c.abort();
       throw new Error('interrupted');
     });
-    const b = fake('webspeech', async () => {});
+    const b = fake('edge', async () => {});
     await speakWithFallback([a, b], 'Hi', { signal: c.signal });
     expect(b.calls).toEqual([]);
   });
@@ -63,5 +63,11 @@ describe('lessonTexts', () => {
     ] as never;
     expect(spokenText({ de: 'A', tts: 'B' })).toBe('B');
     expect(lessonTexts({ items })).toEqual(['Ich hätte gern', 'Brot', 'Ein Brot, bitte.']);
+    const exercises = [
+      { type: 'fill_blank', id: 'a', prompt: 'Ich ___ Brot.', answer: 'esse', accept: [] },
+      { type: 'multiple_choice', id: 'b', prompt: 'p', options: ['x', 'Ich esse.'], correct: 1 },
+    ] as never;
+    expect(lessonTexts({ items, exercises })).toContain('Ich esse Brot.');
+    expect(lessonTexts({ items, exercises })).toContain('Ich esse.');
   });
 });

@@ -1,32 +1,37 @@
 import { db } from '../db';
 import type { EngineId, TtsEngine } from './engine';
 import { ServiceEngine } from './service';
-import { WebSpeechEngine } from './webspeech';
 
 export interface AudioSettings {
   engine: EngineId;
-  serviceUrl: string;
   piperVoice: string;
   edgeVoice: string;
-  webVoiceURI: string;
 }
 
 export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
-  engine: 'webspeech',
-  serviceUrl: 'http://localhost:8787',
+  engine: 'piper',
   piperVoice: 'de_DE-thorsten-high',
   edgeVoice: 'de-DE-KatjaNeural',
-  webVoiceURI: '',
 };
 
 const KEY = 'audio';
 let cache: AudioSettings | null = null;
 
+/** Stored values from older versions (browser engine, service URL) are dropped here. */
+export function sanitizeAudioSettings(raw: unknown): AudioSettings {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const str = (v: unknown, d: string) => (typeof v === 'string' && v ? v : d);
+  return {
+    engine: r.engine === 'edge' ? 'edge' : 'piper',
+    piperVoice: str(r.piperVoice, DEFAULT_AUDIO_SETTINGS.piperVoice),
+    edgeVoice: str(r.edgeVoice, DEFAULT_AUDIO_SETTINGS.edgeVoice),
+  };
+}
+
 export async function getAudioSettings(): Promise<AudioSettings> {
   if (cache) return cache;
   try {
-    const row = await db.settings.get(KEY);
-    cache = { ...DEFAULT_AUDIO_SETTINGS, ...((row?.value as Partial<AudioSettings>) ?? {}) };
+    cache = sanitizeAudioSettings((await db.settings.get(KEY))?.value);
   } catch {
     cache = { ...DEFAULT_AUDIO_SETTINGS };
   }
@@ -34,26 +39,18 @@ export async function getAudioSettings(): Promise<AudioSettings> {
 }
 
 export async function saveAudioSettings(patch: Partial<AudioSettings>): Promise<AudioSettings> {
-  const next = { ...(await getAudioSettings()), ...patch };
+  const next = sanitizeAudioSettings({ ...(await getAudioSettings()), ...patch });
   cache = next;
   await db.settings.put({ key: KEY, value: next });
   return next;
 }
 
 export function makeEngine(id: EngineId, s: AudioSettings): TtsEngine {
-  switch (id) {
-    case 'webspeech':
-      return new WebSpeechEngine(s.webVoiceURI || undefined);
-    case 'piper':
-      return new ServiceEngine('piper', s.serviceUrl, s.piperVoice);
-    case 'edge':
-      return new ServiceEngine('edge', s.serviceUrl, s.edgeVoice);
-  }
+  return new ServiceEngine(id, id === 'piper' ? s.piperVoice : s.edgeVoice);
 }
 
-/** Selected engine first, then Web Speech as the last resort. */
+/** Selected engine first, then the other one as a fallback. */
 export function buildChain(s: AudioSettings): TtsEngine[] {
-  const chain = [makeEngine(s.engine, s)];
-  if (s.engine !== 'webspeech') chain.push(makeEngine('webspeech', s));
-  return chain;
+  const other: EngineId = s.engine === 'piper' ? 'edge' : 'piper';
+  return [makeEngine(s.engine, s), makeEngine(other, s)];
 }
