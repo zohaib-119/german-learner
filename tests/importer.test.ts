@@ -30,7 +30,8 @@ describe('importLessonText (YAML)', () => {
     const r = importLessonText(sample('bakery-vocab.yaml'), 'bakery-vocab.yaml');
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.lesson.items).toHaveLength(5);
+    expect(r.lesson.items).toHaveLength(10);
+    expect(r.warnings).toEqual([]); // every word used in sentences is also an item
     expect(r.lesson.items.map((i) => i.id)).toContain('broetchen');
     expect(r.lesson.exercises).toHaveLength(4);
     expect(new Set(r.lesson.exercises.map((e) => e.id)).size).toBe(4);

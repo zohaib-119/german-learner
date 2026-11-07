@@ -27,6 +27,25 @@ items:
     en: to order
     forms: { er: bestellt, perfekt: hat bestellt }
     example: { de: "Ich bestelle einen Kaffee.", en: "I order a coffee." }
+  - kind: noun
+    de: Kaffee
+    article: der
+    plural: Kaffees
+    en: coffee
+  - kind: noun
+    de: Hunger
+    article: der
+    en: hunger
+  - kind: adjective
+    de: müde
+    en: tired
+  - kind: verb
+    de: schlafen
+    en: to sleep
+    forms: { er: schläft }
+  - kind: other
+    de: zwei
+    en: two
   - kind: phrase
     de: Ich hätte gern …
     en: I would like …

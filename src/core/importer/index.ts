@@ -1,6 +1,7 @@
 import { LineCounter, parseDocument, isNode } from 'yaml';
 import { ExerciseSchema, ItemSchema, LessonSchema, SCHEMA_VERSION } from '../schema';
 import type { ExerciseInput, ItemInput } from '../schema';
+import { buildLexicon, exerciseGermanTexts, uncoveredWords } from '../vocab';
 import { parseCsv } from './csv';
 
 export type NormalizedItem = Omit<ItemInput, 'id'> & { id: string };
@@ -181,6 +182,19 @@ function finalize(data: ReturnType<typeof LessonSchema.parse>): ImportResult {
   });
 
   if (errors.length) return { ok: false, errors };
+
+  // Sentences should only use words the learner has met as vocabulary items.
+  const sentenceTexts = [
+    ...items.flatMap((it) => (it.example?.de ? [it.example.de] : [])),
+    ...items.filter((it) => it.kind === 'sentence').map((it) => it.de),
+    ...exercises.flatMap(exerciseGermanTexts),
+  ];
+  const missing = uncoveredWords(sentenceTexts, buildLexicon(items));
+  if (missing.length) {
+    const shown = missing.slice(0, 25).join(', ') + (missing.length > 25 ? ` … (+${missing.length - 25})` : '');
+    warnings.push(`Words used in sentences but missing from items (add them so they are learned first): ${shown}`);
+  }
+
   return {
     ok: true,
     warnings,
