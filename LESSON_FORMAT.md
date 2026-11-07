@@ -10,10 +10,12 @@ One file = one lesson. Importing a file whose lesson `id` already exists **updat
 
 ## How words and sentences work together
 
-The app assumes you know **no** vocabulary beyond very basic function words. So each lesson has two stages:
+The app assumes you know **no** vocabulary beyond very basic function words, and the main goal is to **recognise words when you read them and when you hear them**. Each lesson has two stages:
 
-1. **Words** – every item that is not `kind: sentence` (nouns, verbs, adjectives, phrases …) is learned first, in the order you list them (put the most useful first).
+1. **Words** – every item that is not `kind: sentence` (nouns, verbs, adjectives, phrases …) is learned first, in the order you list them (put the most useful first). Each word is practised two ways: **Reading** (see the German word, recall the meaning) and **Listening** (hear the word, recall the meaning). Both are also available as separate drills from the lesson's **Practice** row.
 2. **Sentences** – example sentences, `kind: sentence` items and all `exercises` unlock once **80 %** of the words are learned (you can also unlock manually).
+
+**Spelling is separate and optional.** Typing a word (English → German, or typing what you hear) is *not* part of the Words stage or the daily Review. It is a separate **Spelling** practice you start only when you want to, and it only offers words you have already learned. It needs **no extra data in your file**: it is built automatically from each item's `de`, `article` and `en`. So do not write spelling exercises.
 
 **Authoring rule: every content word used in a sentence or exercise must also be an item.**
 Articles, pronouns and basic auxiliaries (ich, du, der, die, ein, und, ist, hat, möchte …) are exempt. When you import, the app warns:
@@ -49,7 +51,7 @@ A lesson may contain only `items`, only `exercises`, or both.
 | `kind`    | no       | one of `noun`, `verb`, `adjective`, `adverb`, `phrase`, `sentence`, `other` | Default `other`. |
 | `article` | no       | `der` \| `die` \| `das` | Nouns only. A noun without an article gives a warning. |
 | `plural`  | no       | string | Plural form without article, e.g. `Brote`. |
-| `example` | no       | object | `de` (required inside) and optional `en`. One example sentence. |
+| `example` | no       | object | `de` (required inside) and optional `en`. One example sentence. **Recommended for every item**: it is shown when you meet the word and becomes a *listening* card in the Sentences stage (hear the sentence, then see its meaning). |
 | `forms`   | no       | map of string → string | Free-form extras, e.g. `er: bestellt`, `perfekt: hat bestellt`. |
 | `tts`     | no       | string | Text to **speak** if it should differ from `de` (e.g. drop "…", fix a mispronunciation). |
 | `notes`   | no       | string | Any note shown with the item. |
@@ -86,6 +88,10 @@ items:
 ```
 
 ### 1.2 Exercises
+
+Because recognition is the focus, lean on the **recognition** types (`listen_choose`, `multiple_choice`) and `word_order`. The two types where you type German (`fill_blank`, `translate`) are valid but use them sparingly.
+
+Exercises are introduced **in the order you list them**, a few per session, so put the recognition exercises (`listen_choose`, `multiple_choice`) first.
 
 Every exercise has a `type` plus the fields for that type. Common optional fields on all types:
 
@@ -164,6 +170,27 @@ English prompt → the learner types German.
   explanation: "Subordinating conjunctions push the verb to the end."
 ```
 
+#### `listen_choose` (listening recognition)
+
+The learner **hears** a German text and picks what it means. The text is never shown until after answering.
+
+| Field     | Required | Notes |
+|-----------|----------|-------|
+| `audio`   | yes | The German word or sentence that is spoken. |
+| `options` | yes (≥ 2) | Answer choices, normally the English meanings (any language is fine). |
+| `correct` | yes | **0-based** index into `options`. |
+| `prompt`  | no  | Optional short question shown under the player, e.g. `What did you hear?`. |
+
+```yaml
+- type: listen_choose
+  audio: "Ich hätte gern ein Brötchen."
+  options: ["I would like a bread roll.", "I would like a coffee.", "I am hungry."]
+  correct: 0
+  explanation: "'hätte gern' = would like."
+```
+
+Words used in `audio` must be items (the import warning checks `audio`, not `options`).
+
 ### 1.3 YAML pitfalls (important when an AI writes the file)
 
 - **Quote any string containing `:` , `#`, a leading `-`, or starting with `[ { * & ! % @`.**
@@ -226,9 +253,9 @@ bestellen,to order,verb,,,"Ich bestelle einen Kaffee.","I order a coffee."
 >
 > Requirements:
 > - `id`: `<short-stable-id>`, `title`: `<title>`, `tags`: `[<tags>]`, level A1/A2.
-> - `items`: the ~`<N>` most useful words/phrases from the material, most basic first. **Every content word (noun, verb, adjective, adverb) that appears in any example sentence or exercise must also be its own item**; only articles, pronouns and basic auxiliaries may be left out. For irregular verbs add `forms`. For every noun give `article` and `plural`. Add one short, natural `example` sentence (`de` + `en`) per item. Use `kind` correctly. Use `tts` only where `de` contains symbols such as `…` or `(`.
-> - `exercises`: about `<M>` exercises mixing `fill_blank`, `word_order`, `translate`, `multiple_choice`, focused on `<grammar focus, e.g. weil / dass verb-final, V2 word order>`. Every exercise needs a short `explanation` in English. For `word_order` and `translate`, list **all** natural correct variants in `answers`.
-> - Quote every string that contains a comma, colon or `#`. Use spaces for indentation. Double-check that `multiple_choice.correct` is a 0-based index and that every `fill_blank.prompt` contains `___`.
+> - `items`: the ~`<N>` most useful words/phrases from the material, most basic first. **Every content word (noun, verb, adjective, adverb) that appears in any example sentence or exercise must also be its own item**; only articles, pronouns and basic auxiliaries may be left out. For irregular verbs add `forms`. For every noun give `article` and `plural`. Add one short, natural `example` sentence (`de` + `en`) for **every** item (it is used for listening practice). Use `kind` correctly. Use `tts` only where `de` contains symbols such as `…` or `(`.
+> - `exercises`: about `<M>` exercises. The learner's main goal is recognising words by reading and by listening, so make about half of them `listen_choose` (German `audio`, English `options`), about a quarter `multiple_choice` and `word_order`, and at most a few `fill_blank` / `translate`. Do **not** write spelling exercises (the app generates spelling practice itself). Focus on `<grammar focus, e.g. weil / dass verb-final, V2 word order>`. Every exercise needs a short `explanation` in English. For `word_order` and `translate`, list **all** natural correct variants in `answers`.
+> - Quote every string that contains a comma, colon or `#`. Use spaces for indentation. Double-check that `multiple_choice.correct` and `listen_choose.correct` are 0-based indexes and that every `fill_blank.prompt` contains `___`.
 > - Do not invent vocabulary that is not appropriate for the level; keep sentences simple and correct.
 
 ---

@@ -33,8 +33,9 @@ describe('importLessonText (YAML)', () => {
     expect(r.lesson.items).toHaveLength(10);
     expect(r.warnings).toEqual([]); // every word used in sentences is also an item
     expect(r.lesson.items.map((i) => i.id)).toContain('broetchen');
-    expect(r.lesson.exercises).toHaveLength(4);
-    expect(new Set(r.lesson.exercises.map((e) => e.id)).size).toBe(4);
+    expect(r.lesson.exercises).toHaveLength(6);
+    expect(new Set(r.lesson.exercises.map((e) => e.id)).size).toBe(6);
+    expect(r.lesson.items.every((i) => i.kind === 'sentence' || i.example)).toBe(true); // every word has an example
   });
 
   it('reports YAML syntax errors', () => {
@@ -104,6 +105,23 @@ exercises:
 
   it('rejects a newer schema_version', () => {
     expect(importLessonText('schema_version: 99\nid: t\ntitle: T\n', 't.yaml').ok).toBe(false);
+  });
+});
+
+describe('listen_choose', () => {
+  const base = `id: t\ntitle: T\nitems:\n  - { kind: noun, de: Brot, article: das, en: bread }\n`;
+  it('imports and checks only the audio text for missing words', () => {
+    const r = importLessonText(`${base}exercises:\n  - { type: listen_choose, audio: "Ich esse Brot.", options: [I eat bread., I drink water.], correct: 0 }\n`, 't.yaml');
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.lesson.exercises[0]!.id).toMatch(/^listen_choose-/);
+      expect(r.warnings.join()).toMatch(/esse/); // the German audio uses a word that is not an item
+      expect(r.warnings.join()).not.toMatch(/drink|water/); // English options are not checked
+    }
+  });
+  it('rejects a bad correct index and a missing audio field', () => {
+    expect(importLessonText(`${base}exercises:\n  - { type: listen_choose, audio: Hallo, options: [a, b], correct: 3 }\n`, 't.yaml').ok).toBe(false);
+    expect(importLessonText(`${base}exercises:\n  - { type: listen_choose, options: [a, b], correct: 0 }\n`, 't.yaml').ok).toBe(false);
   });
 });
 

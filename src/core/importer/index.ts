@@ -55,6 +55,8 @@ function exerciseKey(e: ExerciseInput): string {
       return e.prompt + '|' + e.answers[0];
     case 'multiple_choice':
       return e.prompt + '|' + e.options.join('/');
+    case 'listen_choose':
+      return e.audio + '|' + e.options.join('/');
   }
 }
 

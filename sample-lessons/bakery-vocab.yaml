@@ -22,6 +22,7 @@ items:
     article: die
     plural: Bäckereien
     en: bakery
+    example: { de: "Ich bin in der Bäckerei.", en: "I am in the bakery." }
   - kind: verb
     de: bestellen
     en: to order
@@ -32,26 +33,43 @@ items:
     article: der
     plural: Kaffees
     en: coffee
+    example: { de: "Zwei Kaffee, bitte.", en: "Two coffees, please." }
   - kind: noun
     de: Hunger
     article: der
     en: hunger
+    example: { de: "Ich habe Hunger.", en: "I am hungry." }
   - kind: adjective
     de: müde
     en: tired
+    example: { de: "Ich bin müde.", en: "I am tired." }
   - kind: verb
     de: schlafen
     en: to sleep
     forms: { er: schläft }
+    example: { de: "Ich schlafe gern.", en: "I like sleeping." }
   - kind: other
     de: zwei
     en: two
+    example: { de: "Ich hätte gern zwei Brötchen.", en: "I would like two bread rolls." }
   - kind: phrase
     de: Ich hätte gern …
     en: I would like …
     tts: Ich hätte gern
+    example: { de: "Ich hätte gern einen Kaffee.", en: "I would like a coffee." }
 
 exercises:
+  - type: listen_choose
+    audio: "Ich hätte gern zwei Brötchen."
+    options: ["I would like two bread rolls.", "I would like two coffees.", "I am in the bakery."]
+    correct: 0
+    explanation: "'hätte gern' = would like; 'zwei' = two."
+
+  - type: listen_choose
+    audio: "Ich habe Hunger."
+    options: ["I am tired.", "I am hungry.", "I order bread."]
+    correct: 1
+    explanation: "German says 'I have hunger' where English says 'I am hungry'."
   - type: fill_blank
     prompt: "Ich ___ gern ein Brot."
     answer: hätte
