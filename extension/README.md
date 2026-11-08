@@ -28,8 +28,15 @@ After changing the code, run `npm run ext:build` again (or keep `npm run ext:wat
 
 1. Start the app (`npm run dev`) and make sure you are logged in to ChatGPT or Claude in the same browser.
 2. Open a YouTube video.
-3. Click the extension icon and press **Create subtitles for this video**, or right-click the page and choose **Create learning subtitles for this video**.
+3. Click the extension icon, pick **ChatGPT** or **Claude** (your choice is remembered), and press **Create subtitles for this video**. You can also right-click the page and choose **Create learning subtitles for this video**.
 4. Leave the tabs alone until the job page says it is done. A 10-minute video takes a few AI messages, which usually takes a few minutes.
+
+### Videos you already did
+
+Every finished video is saved in the extension's own library (in your browser), and also in the app's **Videos** tab, where you can play it any time. When you click the extension on a video that's already done, the popup shows **Subtitles ready** with:
+
+- **Open in app**: sends the saved subtitles to the app straight away, with no AI and no waiting. This also restores a video you deleted in the app.
+- **Create again**: makes new subtitles, for example with the other AI or after changing your level.
 
 ### Settings
 
@@ -78,6 +85,7 @@ extension/
     youtube-scrape.ts  injected into the YouTube tab; reads the transcript panel, falls back to the caption track
     ai-content.ts      content script on ChatGPT / Claude: writes the prompt, sends it, waits for the reply
     app-content.ts     content script on localhost: passes the result to the app with window.postMessage
+    library.ts         saved finished subtitles per video (chrome.storage, unlimitedStorage)
     settings.ts        stored settings
 ```
 
