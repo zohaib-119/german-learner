@@ -105,6 +105,20 @@ await p.keyboard.press(' '); await sleep(200);
 ok('Space pauses (even right after clicking a control)', (await fake(() => window.__fake.state)) === 2);
 await p.keyboard.press(' '); await sleep(200);
 ok('Space plays again', (await fake(() => window.__fake.state)) === 1);
+// A button that keeps keyboard focus (e.g. reached with Tab) must not take over Space or the arrows.
+await p.getByRole('button', { name: 'Next line' }).focus();
+const tBefore = await fake(() => window.__fake.t);
+await p.keyboard.press(' '); await sleep(200);
+ok('Space pauses even when a button has focus', (await fake(() => window.__fake.state)) === 2
+  && Math.abs((await fake(() => window.__fake.t)) - tBefore) < 0.6);
+await p.keyboard.press(' '); await sleep(200);
+ok('Space plays again with a button focused', (await fake(() => window.__fake.state)) === 1);
+await fake(() => { window.__fake.t = 17; }); await sleep(250);
+await p.getByRole('button', { name: '0.75×' }).focus();
+await p.keyboard.press('ArrowRight'); await sleep(250);
+ok('ArrowRight goes to the next line with a button focused', Math.abs((await fake(() => window.__fake.t)) - 24) < 0.6);
+await p.keyboard.press('ArrowLeft'); await sleep(250);
+ok('ArrowLeft goes back with a button focused', Math.abs((await fake(() => window.__fake.t)) - 16) < 0.6);
 
 await p.getByRole('button', { name: '0.75×' }).click();
 ok('speed 0.75×', (await fake(() => window.__fake.rate)) === 0.75);
