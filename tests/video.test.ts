@@ -14,6 +14,7 @@ import {
   parseAiReply,
   parseSubtitles,
   parseTimestamp,
+  parseTranscriptText,
   toSrt,
   videoIdFromUrl,
 } from '../src/core/video';
@@ -217,5 +218,21 @@ describe('activeIndex', () => {
     expect(activeIndex(segs, 4.9)).toBe(1);
     expect(activeIndex(segs, 6)).toBe(1); // in a gap: the previous line stays active
     expect(activeIndex(segs, 100)).toBe(2);
+  });
+});
+
+describe('parseTranscriptText', () => {
+  it('reads the copied transcript panel (timestamp line, then text)', () => {
+    expect(parseTranscriptText('0:01\nHallo und\nwillkommen\n0:04\n[Musik]\n1:02:03\nzum Schluss')).toEqual([
+      { start: 1, text: 'Hallo und willkommen' },
+      { start: 3723, text: 'zum Schluss' },
+    ]);
+  });
+  it('reads "0:01 text" on one line and passes SRT through', () => {
+    expect(parseTranscriptText('0:01 Hallo\n0:03 Welt')).toEqual([{ start: 1, text: 'Hallo' }, { start: 3, text: 'Welt' }]);
+    expect(parseTranscriptText('1\n00:00:01,000 --> 00:00:02,000\nHi\n')).toEqual([{ start: 1, end: 2, text: 'Hi' }]);
+  });
+  it('ignores text before the first timestamp', () => {
+    expect(parseTranscriptText('Transcript\nSearch\n0:05\nLos geht es')).toEqual([{ start: 5, text: 'Los geht es' }]);
   });
 });

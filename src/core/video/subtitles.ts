@@ -99,3 +99,31 @@ export function videoIdFromUrl(input: string): string | null {
   }
   return null;
 }
+
+/**
+ * Parses text copied from YouTube's "Show transcript" panel, where each timestamp is followed by its text:
+ *   0:01
+ *   Hallo und willkommen
+ *   0:04
+ *   zu unserem Video
+ * Also accepts "0:01 Hallo" on one line, and falls back to SRT/VTT when the text contains "-->".
+ */
+export function parseTranscriptText(input: string): Cue[] {
+  if (input.includes('-->')) return parseSubtitles(input);
+  const cues: Cue[] = [];
+  let current: Cue | null = null;
+  for (const raw of input.replace(/\r\n?/g, '\n').split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    const m = line.match(/^((?:\d+:)?\d{1,2}:\d{2})(?:\s+(.*))?$/);
+    const t = m ? parseTimestamp(m[1]!) : null;
+    if (m && t !== null) {
+      if (current?.text) cues.push(current);
+      current = { start: t, text: cleanCueText(m[2] ?? '') };
+    } else if (current) {
+      current.text = current.text ? `${current.text} ${cleanCueText(line)}` : cleanCueText(line);
+    }
+  }
+  if (current?.text) cues.push(current);
+  return cues.filter((c) => !isSoundAnnotation(c.text));
+}
