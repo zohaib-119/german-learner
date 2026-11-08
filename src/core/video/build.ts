@@ -36,7 +36,8 @@ export function buildVideoFile(meta: VideoMeta, lines: Line[], replies: AiItem[]
         end: round(l.end),
         text: l.text,
         ...(r ? { translation: r.t } : {}),
-        glossary: (r?.g ?? []).map((g) => ({ word: g.w, meaning: g.m })),
+        glossary: (r?.g ?? []).map((g) => ({ word: g.w, meaning: g.m, ...(g.b ? { base: g.b } : {}), ...(g.k ? { kind: g.k } : {}) })),
+        phrases: (r?.p ?? []).map((x) => ({ text: x.p, meaning: x.m, ...(x.n ? { note: x.n } : {}) })),
       };
     }),
   };

@@ -8,8 +8,21 @@ const text = z.string().trim().min(1);
 export const GlossEntrySchema = z.object({
   /** The word or phrase exactly as it is written in the subtitle line (used for highlighting). */
   word: text,
-  /** Short meaning in the learner's language. */
+  /** Short meaning in the learner's language, in this context. */
   meaning: text,
+  /** Dictionary form, e.g. "der Bäcker", "aufstehen". */
+  base: z.string().trim().optional(),
+  /** Word type, e.g. noun, verb, adjective. */
+  kind: z.string().trim().optional(),
+});
+
+export const PhraseSchema = z.object({
+  /** The phrase as it appears in the line. */
+  text: text,
+  /** What the whole phrase means. */
+  meaning: text,
+  /** Why it means that, e.g. the literal translation. */
+  note: z.string().trim().optional(),
 });
 
 export const SegmentSchema = z.object({
@@ -19,6 +32,7 @@ export const SegmentSchema = z.object({
   text: text,
   translation: z.string().trim().optional(),
   glossary: z.array(GlossEntrySchema).default([]),
+  phrases: z.array(PhraseSchema).default([]),
 });
 
 export const YOUTUBE_ID = /^[\w-]{11}$/;
@@ -44,6 +58,7 @@ export const VideoFileSchema = z.object({
 });
 
 export type GlossEntry = z.infer<typeof GlossEntrySchema>;
+export type Phrase = z.infer<typeof PhraseSchema>;
 export type VideoSegment = z.infer<typeof SegmentSchema>;
 export type VideoFileInput = z.input<typeof VideoFileSchema>;
 
