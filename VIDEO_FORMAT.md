@@ -58,7 +58,6 @@ Each segment:
 | `text` | yes | The line as spoken. |
 | `translation` | no | Shown under the line when translations are on. |
 | `glossary` | no | Each entry is `word`, `meaning`, and optionally `base` (dictionary form, e.g. `der Bäcker`, `aufstehen`) and `kind` (noun, verb, …). Words to highlight. `word` must be written as it appears in the line, ignoring case. For a separable verb whose parts are split in the line ("steht … früh auf"), write both parts in order: `"steht auf"`; both parts get highlighted. An entry that can't be found in the line is listed under it instead. |
-
 | `phrases` | no | Fixed expressions whose meaning is more than their words: `text` (as in the line), `meaning`, and an optional `note` explaining why (the literal meaning). Shown under the line. |
 
 By default the extension asks the AI to explain **every word of every line**, repeats included, so a complete beginner never has to look back. Choose "Only harder words" in the extension settings for less.
