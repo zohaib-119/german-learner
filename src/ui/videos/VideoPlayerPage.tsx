@@ -4,6 +4,7 @@ import {
   Eye,
   EyeOff,
   Gauge,
+  GraduationCap,
   Maximize,
   Minimize,
   Pause,
@@ -17,14 +18,21 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildLexicon } from '../../core/vocab';
-import { activeIndex, annotateLine, formatTimestamp, toSrt, type Part, type VideoSegment } from '../../core/video';
-import { db, type VideoRow } from '../../db';
+import { stringify as toYaml } from 'yaml';
+import { activeIndex, annotateLine, formatTimestamp, lessonFromVideo, toSrt, type GlossEntry, type Part, type VideoSegment } from '../../core/video';
+import { db, saveLesson, type VideoRow } from '../../db';
 import { SpeakButton } from '../components';
-import { href, useAsync, useKeys } from '../hooks';
+import { href, navigate, useAsync, useKeys } from '../hooks';
 import { AnnotatedText } from './AnnotatedText';
 import { PlayerState, describePlayerError, loadYouTubeApi, type YTPlayer } from './youtube';
 
 const RATES = [0.5, 0.75, 1, 1.25];
+/** Tooltip text: meaning in this line, plus the dictionary form when it differs ("gets up · aufstehen"). */
+const glossText = (g: GlossEntry): GlossEntry => ({
+  word: g.word,
+  meaning: g.base && g.base.toLowerCase() !== g.word.toLowerCase() ? `${g.meaning} · ${g.base}` : g.meaning,
+});
+
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 function download(name: string, text: string) {
@@ -227,7 +235,20 @@ function Player({ video, lexicon }: { video: VideoRow; lexicon: ReturnType<typeo
     },
     [lexicon],
   );
-  const annotated = useMemo(() => (seg ? annotateLine(seg.text, seg.glossary, lookup) : null), [seg, lookup]);
+  const annotated = useMemo(() => (seg ? annotateLine(seg.text, seg.glossary.map(glossText), lookup) : null), [seg, lookup]);
+  const [lessonError, setLessonError] = useState<string | null>(null);
+  const createLesson = async () => {
+    const r = lessonFromVideo(video);
+    if (!r.ok) return setLessonError(r.errors.join('\n'));
+    await saveLesson(db, r.lesson);
+    navigate(href(`lessons/${r.lesson.id}`));
+  };
+  const downloadLesson = () => {
+    const r = lessonFromVideo(video);
+    if (!r.ok) return setLessonError(r.errors.join('\n'));
+    const { id, title, tags, source, items, exercises } = r.lesson;
+    download(`${id}.yaml`, toYaml({ schema_version: 1, id, title, tags, source, items, exercises }));
+  };
 
   return (
     <>
@@ -256,6 +277,16 @@ function Player({ video, lexicon }: { video: VideoRow; lexicon: ReturnType<typeo
                     <AnnotatedText annotated={annotated} onPick={(p) => { playerRef.current?.pauseVideo(); setPicked(p); }} />
                   </div>
                   {showTr && seg.translation && <div className="vid-translation">{seg.translation}</div>}
+                  {seg.phrases.length > 0 && (
+                    <div className="vid-phrases">
+                      {seg.phrases.map((p) => (
+                        <span key={p.text} className="vid-phrase">
+                          <b>{p.text}</b> {p.meaning}
+                          {p.note && <i> · {p.note}</i>}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {annotated.unplaced.length > 0 && (
                     <div className="vid-extra">
                       {annotated.unplaced.map((g) => (
@@ -322,8 +353,21 @@ function Player({ video, lexicon }: { video: VideoRow; lexicon: ReturnType<typeo
               {fullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
             </button>
           </div>
-          <h1 className="vid-title">{video.title}</h1>
-          <div className="muted">{video.channel}</div>
+          <div className="vid-title-row">
+            <div>
+              <h1 className="vid-title">{video.title}</h1>
+              <div className="muted">{video.channel}</div>
+            </div>
+            <div className="row">
+              <button className="btn primary sm" title="Learn this video's words and phrases as a lesson" onClick={() => void createLesson()}>
+                <GraduationCap size={16} /> Create lesson
+              </button>
+              <button className="btn sm" title="Download as a lesson file (.yaml)" onClick={downloadLesson}>
+                <Download size={16} /> Lesson file
+              </button>
+            </div>
+          </div>
+          {lessonError && <p className="err small">{lessonError}</p>}
         </div>
 
         <aside className="vid-side">

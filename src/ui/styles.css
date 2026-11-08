@@ -410,3 +410,9 @@ select {
 
 @media (max-width: 1100px) { .vid-layout { grid-template-columns: 1fr; } .vid-side { position: static; } .vid-list { max-height: 360px; } }
 @media (max-width: 520px) { .vid-line { font-size: 1.3rem; } }
+.vid-phrases { display: flex; flex-direction: column; gap: 4px; font-size: .95rem; color: #d5dcf2; }
+.vid-phrase { border-left: 3px solid #f5b94a; padding-left: 10px; }
+.vid-phrase b { color: #fff; }
+.vid-phrase i { color: #aab4d4; font-style: normal; }
+.vid-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
+.vid-title-row .vid-title { margin-top: 0; }
