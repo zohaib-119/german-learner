@@ -23,8 +23,10 @@ const youtubePage = (id, withTranscript) => `<!doctype html><html><head><title>B
   const btn = document.querySelector('ytd-video-description-transcript-section-renderer button');
   if (btn) btn.onclick = () => setTimeout(() => {
     const panel = document.getElementById('panel');
-    panel.innerHTML = ${JSON.stringify(SEGMENTS)}.map(([t, s]) =>
-      '<ytd-transcript-segment-renderer><div class="segment-timestamp">' + t + '</div><yt-formatted-string class="segment-text">' + s + '</yt-formatted-string></ytd-transcript-segment-renderer>').join('')
+    const rows = ${JSON.stringify(SEGMENTS)}.map(([t, s]) =>
+      '<ytd-transcript-segment-renderer><div class="segment-timestamp">' + t + '</div><yt-formatted-string class="segment-text">' + s + '</yt-formatted-string></ytd-transcript-segment-renderer>').join('');
+    // The same list appears twice on the page (the cause of repeated lines seen on real YouTube).
+    panel.innerHTML = rows + '<div class="copy">' + rows + '</div>'
       + '<ytd-transcript-footer-renderer><yt-dropdown-menu>Deutsch (automatisch erzeugt)</yt-dropdown-menu></ytd-transcript-footer-renderer>';
   }, 300);
 </script></body></html>`;
@@ -52,7 +54,11 @@ const chatPage = `<!doctype html><html><head><title>Mock chat</title>
     // The first answer leaves out line 2 so the extension has to ask again.
     const answered = firstAnswer ? lines.filter((l) => l.i !== 2) : lines;
     firstAnswer = false;
-    const json = JSON.stringify(answered.map((l) => ({ i: l.i, t: 'EN: ' + l.text, g: [{ w: l.text.split(' ')[0], m: 'meaning of ' + l.text.split(' ')[0] }] })));
+    const json = JSON.stringify(answered.map((l) => ({
+      i: l.i, t: 'EN: ' + l.text,
+      g: l.text.replace(/[.,!?]/g, '').split(' ').map((w) => ({ w, b: w.toLowerCase(), k: 'other', m: 'meaning of ' + w })),
+      p: [{ p: l.text.split(' ').slice(0, 2).join(' '), m: 'phrase meaning', n: 'literally: test' }],
+    })));
     const msg = document.createElement('div'); msg.dataset.messageAuthorRole = 'assistant';
     msg.innerHTML = '<p>Here you go:</p><pre><div>json</div><code></code></pre>';
     setTimeout(() => {

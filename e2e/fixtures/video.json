@@ -7,7 +7,7 @@
   "video": { "provider": "youtube", "id": "kRq3WzSwUw0" },
   "segments": [
     { "start": 0, "end": 8, "text": "Hallo und willkommen zu unserem Video.", "translation": "Hello and welcome to our video.", "glossary": [{ "word": "willkommen", "meaning": "welcome" }] },
-    { "start": 8, "end": 16, "text": "Heute steht der Bäcker früh auf.", "translation": "Today the baker gets up early.", "glossary": [{ "word": "steht auf", "meaning": "gets up (aufstehen)" }, { "word": "Bäcker", "meaning": "the baker (der Bäcker)" }] },
+    { "start": 8, "end": 16, "text": "Heute steht der Bäcker früh auf.", "translation": "Today the baker gets up early.", "glossary": [{ "word": "steht auf", "meaning": "gets up", "base": "aufstehen", "kind": "verb" }, { "word": "Bäcker", "meaning": "the baker", "base": "der Bäcker", "kind": "noun" }], "phrases": [{ "text": "früh auf", "meaning": "up early", "note": "literally: early up" }] },
     { "start": 16, "end": 24, "text": "Er kauft Brot und Käse.", "translation": "He buys bread and cheese.", "glossary": [{ "word": "kauft", "meaning": "buys (kaufen)" }, { "word": "Pizza", "meaning": "not in this line" }] },
     { "start": 24, "end": 32, "text": "Danach geht er nach Hause.", "translation": "Afterwards he goes home.", "glossary": [] }
   ]

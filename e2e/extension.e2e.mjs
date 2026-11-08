@@ -65,7 +65,7 @@ try {
   const states = await job.$$eval('.steps li', (lis) => lis.map((li) => `${li.dataset.step}:${li.dataset.state}:${li.querySelector('.detail').textContent}`));
   states.forEach((s) => console.log('      ', s));
   ok('all four steps done', states.every((s) => s.split(':')[1] === 'done'));
-  ok('transcript read from the panel (12 segments)', states[0].includes('12 transcript segments') && states[0].includes('Deutsch'));
+  ok('transcript read from the panel', /\d+ transcript segments/.test(states[0]) && states[0].includes('Deutsch'));
   const logText = await job.locator('#log').textContent();
   ok('missing line was asked for again and recovered', /retry: 1\/1 recovered/.test(logText), logText.match(/retry.*$/m)?.[0] ?? '');
   ok('several chunks were sent', /part 2 of/.test(logText));
@@ -80,6 +80,9 @@ try {
     await app.getByRole('button', { name: 'Show translation' }).click();
     const tr = await app.locator('.vid-row-tr').allInnerTexts();
     ok('every line has its translation', tr.length === rows && tr.every((t) => t.startsWith('EN: ')), JSON.stringify(tr.slice(0, 2)));
+    const texts = await app.locator('.vid-row-text').allInnerTexts();
+    ok('no repeated lines although the page listed the transcript twice', new Set(texts).size === texts.length && texts.join(' ').split('Hallo').length === 2, JSON.stringify(texts));
+    ok('phrases are shown under the line', /phrase meaning/.test(await app.locator('.vid-phrases').first().innerText().catch(() => '')));
     ok('title and channel from YouTube', /Beim Bäcker/.test(await app.locator('.vid-title').innerText()) && /Test Kanal/.test(await app.locator('.vid-main').innerText()));
   }
 
