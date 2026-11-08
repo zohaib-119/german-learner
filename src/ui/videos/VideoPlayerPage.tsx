@@ -104,6 +104,7 @@ function Player({ video, lexicon }: { video: VideoRow; lexicon: ReturnType<typeo
           playerVars: {
             fs: 0, // we provide our own fullscreen so the subtitle bar stays visible
             rel: 0,
+            disablekb: 1, // YouTube's own keys (arrows = 5s jumps) would clash with ours
             playsinline: 1,
             iv_load_policy: 3,
             cc_load_policy: 0,
@@ -224,7 +225,22 @@ function Player({ video, lexicon }: { video: VideoRow; lexicon: ReturnType<typeo
     l: () => setLoop((v) => !v),
     t: () => setShowTr((v) => !v),
     a: () => setAutoPause((v) => !v),
-  });
+  }, true, true);
+
+  // Clicking the video moves keyboard focus into YouTube's frame, where our keys can't be heard.
+  // Take focus back right away so Space and the arrows keep working after a click on the video.
+  useEffect(() => {
+    const reclaim = () =>
+      setTimeout(() => {
+        const el = document.activeElement;
+        if (el instanceof HTMLIFrameElement && hostRef.current?.contains(el)) {
+          el.blur();
+          stageRef.current?.focus({ preventScroll: true });
+        }
+      }, 0);
+    window.addEventListener('blur', reclaim);
+    return () => window.removeEventListener('blur', reclaim);
+  }, []);
 
   // ---- render --------------------------------------------------------------------------------------
   const seg = idx >= 0 ? segments[idx] : undefined;
@@ -257,7 +273,7 @@ function Player({ video, lexicon }: { video: VideoRow; lexicon: ReturnType<typeo
       </a>
       <div className="vid-layout">
         <div className="vid-main">
-          <div ref={stageRef} className={`vid-stage ${fullscreen ? 'is-fs' : ''}`}>
+          <div ref={stageRef} tabIndex={-1} className={`vid-stage ${fullscreen ? 'is-fs' : ''}`}>
             <div className="vid-frame">
               <div ref={hostRef} className="vid-host" />
               {error && (

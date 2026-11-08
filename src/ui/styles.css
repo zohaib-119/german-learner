@@ -402,6 +402,7 @@ select {
 .vid-row-tr { display: block; color: var(--muted); font-size: .92rem; }
 
 /* our own fullscreen: video + subtitle bar stacked, never overlaid */
+.vid-stage:focus { outline: none; }
 .vid-stage.is-fs { border-radius: 0; height: 100vh; }
 .vid-stage.is-fs .vid-frame { aspect-ratio: auto; flex: 1; }
 .vid-stage.is-fs .vid-bar { min-height: 150px; padding: 20px 40px 26px; }

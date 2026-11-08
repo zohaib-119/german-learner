@@ -59,25 +59,42 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]): { data: T | 
 
 // ---- keyboard ----------------------------------------------------------------------------------
 
-/** Global key handler. Keys typed inside inputs are ignored so typing never triggers shortcuts. */
-export function useKeys(handlers: Record<string, () => void>, enabled = true): void {
+/**
+ * Global key handler. Keys typed inside inputs are ignored so typing never triggers shortcuts.
+ * By default a focused button keeps Enter/Space for itself. With `force`, the shortcut always wins:
+ * the keys are caught before the focused element sees them and its own action is cancelled.
+ */
+export function useKeys(handlers: Record<string, () => void>, enabled = true, force = false): void {
   const ref = useRef(handlers);
   ref.current = handlers;
   useEffect(() => {
     if (!enabled) return;
+    const typing = (t: HTMLElement | null) =>
+      !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
     const on = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+      if (typing(t)) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       // A focused button handles Enter/Space itself (native click); don't also fire the shortcut.
-      if (t && (t.tagName === 'BUTTON' || t.tagName === 'A') && (e.key === 'Enter' || e.key === ' ')) return;
+      if (!force && t && (t.tagName === 'BUTTON' || t.tagName === 'A') && (e.key === 'Enter' || e.key === ' ')) return;
       const h = ref.current[e.key];
       if (h) {
         e.preventDefault();
+        if (force) e.stopPropagation();
+        // Holding Space would toggle on and off; only arrows etc. repeat.
+        if (e.repeat && e.key === ' ') return;
         h();
       }
     };
-    window.addEventListener('keydown', on);
-    return () => window.removeEventListener('keydown', on);
-  }, [enabled]);
+    // A button "clicks" on Space keyup; cancel that too so Space never repeats the last pressed button.
+    const up = (e: KeyboardEvent) => {
+      if (force && e.key === ' ' && ref.current[' '] && !typing(e.target as HTMLElement | null)) e.preventDefault();
+    };
+    window.addEventListener('keydown', on, force);
+    window.addEventListener('keyup', up, force);
+    return () => {
+      window.removeEventListener('keydown', on, force);
+      window.removeEventListener('keyup', up, force);
+    };
+  }, [enabled, force]);
 }
