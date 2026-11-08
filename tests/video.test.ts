@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PROMPT_OPTIONS,
+  dedupeCues,
   activeIndex,
   annotateLine,
   buildPrompt,
   buildRetryPrompt,
   buildVideoFile,
+  lessonFromVideo,
   chunkLines,
   formatTimestamp,
   mergeCues,
@@ -134,11 +136,11 @@ describe('parseAiReply', () => {
     expect(parseAiReply(good)).toHaveLength(2);
     expect(parseAiReply(`{"lines": ${good}}`)).toHaveLength(2);
     const alt = parseAiReply(`[{"index":"3","translation":"Hi","glossary":[{"word":"Hallo","meaning":"hello"}]}]`);
-    expect(alt).toEqual([{ i: 3, t: 'Hi', g: [{ w: 'Hallo', m: 'hello' }] }]);
+    expect(alt).toEqual([{ i: 3, t: 'Hi', g: [{ w: 'Hallo', m: 'hello' }], p: [] }]);
   });
   it('handles brackets inside strings and ignores invalid entries', () => {
     const items = parseAiReply(`[{"i":1,"t":"a [b] c","g":[]},{"i":"x","t":"bad"},{"i":2,"t":""}]`);
-    expect(items).toEqual([{ i: 1, t: 'a [b] c', g: [] }]);
+    expect(items).toEqual([{ i: 1, t: 'a [b] c', g: [], p: [] }]);
   });
   it('returns nothing for text without JSON or with truncated JSON', () => {
     expect(parseAiReply('I cannot do that.')).toEqual([]);
@@ -157,13 +159,15 @@ describe('buildVideoFile + normalizeVideo', () => {
   ];
   const meta = { videoId: 'kRq3WzSwUw0', title: 'Test', channel: 'Easy German', level: 'A1' };
   it('keeps AI text out of timing and text, and validates', () => {
-    const file = buildVideoFile(meta, lines, [{ i: 1, t: 'I eat bread.', g: [{ w: 'Brot', m: 'bread' }] }, { i: 2, t: 'He gets up.', g: [] }]);
+    const file = buildVideoFile(meta, lines, [{ i: 1, t: 'I eat bread.', g: [{ w: 'Brot', m: 'bread', b: 'das Brot', k: 'noun' }], p: [] }, { i: 2, t: 'He gets up.', g: [], p: [{ p: 'steht auf', m: 'gets up', n: 'aufstehen = stand up' }] }]);
     const r = normalizeVideo(file);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.video.id).toBe('yt-kRq3WzSwUw0');
     expect(r.video.segments.map((s) => s.text)).toEqual(['Ich esse Brot.', 'Er steht auf.']);
     expect(r.video.segments[0]!.translation).toBe('I eat bread.');
+    expect(r.video.segments[0]!.glossary[0]).toEqual({ word: 'Brot', meaning: 'bread', base: 'das Brot', kind: 'noun' });
+    expect(r.video.segments[1]!.phrases).toEqual([{ text: 'steht auf', meaning: 'gets up', note: 'aufstehen = stand up' }]);
     expect(r.warnings).toEqual([]);
   });
   it('warns about untranslated lines and repairs bad end times and ordering', () => {
@@ -234,5 +238,103 @@ describe('parseTranscriptText', () => {
   });
   it('ignores text before the first timestamp', () => {
     expect(parseTranscriptText('Transcript\nSearch\n0:05\nLos geht es')).toEqual([{ start: 5, text: 'Los geht es' }]);
+  });
+});
+
+describe('dedupeCues', () => {
+  it('drops a transcript read twice and repeats a moment later, keeps real repetition', () => {
+    const cues = [
+      { start: 0, text: 'Hallo und willkommen' },
+      { start: 2, text: 'zu unserem Video.' },
+      { start: 0, text: 'Hallo und willkommen' },
+      { start: 2, text: 'zu unserem Video.' },
+      { start: 3, text: 'zu unserem Video.' },
+      { start: 60, text: 'Hallo und willkommen' },
+    ];
+    expect(dedupeCues(cues).map((c) => `${c.start} ${c.text}`)).toEqual(['0 Hallo und willkommen', '2 zu unserem Video.', '60 Hallo und willkommen']);
+  });
+  it('trims auto-caption overlap and growing roll-up cues', () => {
+    const out = dedupeCues([
+      { start: 0, text: 'ich gehe heute' },
+      { start: 2, text: 'gehe heute zum Bäcker' },
+      { start: 10, text: 'das ist' },
+      { start: 11, text: 'das ist gut' },
+    ]);
+    expect(out.map((c) => c.text)).toEqual(['ich gehe heute', 'zum Bäcker', 'das ist gut']);
+    expect(out[2]!.start).toBe(10);
+  });
+  it('mergeCues uses it, so lines are never doubled', () => {
+    const lines = mergeCues([{ start: 0, text: 'Guten Morgen.' }, { start: 0, text: 'Guten Morgen.' }, { start: 3, text: 'Wie geht es?' }]);
+    expect(lines.map((l) => l.text)).toEqual(['Guten Morgen.', 'Wie geht es?']);
+  });
+});
+
+describe('prompt modes', () => {
+  const [chunk] = chunkLines([{ start: 0, end: 1, text: 'Ich kaufe Brot.' }]);
+  it('beginner default explains every word, repeated ones included, and asks for phrases', () => {
+    const p = buildPrompt(chunk!, 1, DEFAULT_PROMPT_OPTIONS);
+    expect(p).toContain('complete beginner');
+    expect(p).toContain('EVERY word of the line');
+    expect(p).toContain('explain it again there');
+    expect(p).toContain('"p"');
+    expect(p).toContain('literal');
+  });
+  it('"hard" mode keeps the short list', () => {
+    const p = buildPrompt(chunk!, 1, { ...DEFAULT_PROMPT_OPTIONS, level: 'B1', glossMode: 'hard' });
+    expect(p).toContain('B1 learner');
+    expect(p).not.toContain('EVERY word of the line');
+  });
+  it('defaults to small chunks because beginner replies are long', () => {
+    const many = Array.from({ length: 40 }, (_, i) => ({ start: i, end: i + 1, text: `Satz ${i}` }));
+    expect(chunkLines(many)[0]!.lines).toHaveLength(15);
+  });
+  it('parses dictionary form, word type and phrases', () => {
+    const [item] = parseAiReply('[{"i":1,"t":"I buy bread.","g":[{"w":"kaufe","b":"kaufen","k":"verb","m":"(I) buy"}],"p":[{"p":"Lust haben","m":"to feel like","n":"literally: to have desire"}]}]');
+    expect(item!.g[0]).toEqual({ w: 'kaufe', m: '(I) buy', b: 'kaufen', k: 'verb' });
+    expect(item!.p[0]).toEqual({ p: 'Lust haben', m: 'to feel like', n: 'literally: to have desire' });
+  });
+});
+
+describe('lessonFromVideo', () => {
+  const file = buildVideoFile({ videoId: 'kRq3WzSwUw0', title: 'Beim Bäcker', level: 'A0' }, [
+    { start: 0, end: 3, text: 'Ich kaufe das Brot.' },
+    { start: 3, end: 6, text: 'Der Bäcker steht früh auf.' },
+    { start: 6, end: 9, text: 'Wie geht es dir?' },
+    { start: 9, end: 12, text: 'Ich kaufe noch ein Brot.' },
+  ], [
+    { i: 1, t: 'I buy the bread.', g: [{ w: 'Ich', m: 'I', k: 'pronoun' }, { w: 'kaufe', b: 'kaufen', k: 'verb', m: '(I) buy' }, { w: 'das', m: 'the', k: 'article' }, { w: 'Brot', b: 'das Brot', k: 'noun', m: 'bread' }], p: [] },
+    { i: 2, t: 'The baker gets up early.', g: [{ w: 'Bäcker', b: 'der Bäcker', k: 'noun', m: 'baker' }, { w: 'steht auf', b: 'aufstehen', k: 'verb', m: 'gets up' }, { w: 'früh', b: 'früh', k: 'adverb', m: 'early' }], p: [] },
+    { i: 3, t: 'How are you?', g: [{ w: 'Wie', m: 'how', k: 'adverb' }], p: [{ p: 'Wie geht es dir?', m: 'How are you?', n: 'literally: how goes it to you' }] },
+    { i: 4, t: 'I buy another bread.', g: [{ w: 'kaufe', b: 'kaufen', k: 'verb', m: '(I) buy' }, { w: 'Brot', b: 'das Brot', k: 'noun', m: 'bread' }], p: [] },
+  ]);
+  const r = normalizeVideo(file);
+  if (!r.ok) throw new Error('fixture invalid');
+  const lesson = lessonFromVideo(r.video);
+
+  it('creates a valid lesson from the video', () => {
+    expect(lesson.ok).toBe(true);
+  });
+  it('turns content words into items with dictionary form, article and the video line as example', () => {
+    if (!lesson.ok) return;
+    const byId = Object.fromEntries(lesson.lesson.items.map((i) => [i.id, i]));
+    expect(byId.brot).toMatchObject({ de: 'Brot', article: 'das', kind: 'noun', en: 'bread', example: { de: 'Ich kaufe das Brot.', en: 'I buy the bread.' } });
+    expect(byId.kaufen).toMatchObject({ de: 'kaufen', kind: 'verb', en: 'buy' });
+    expect(byId.aufstehen).toMatchObject({ kind: 'verb', en: 'gets up' });
+    expect(byId['ich']).toBeUndefined(); // pronoun / basic word
+    expect(byId['das']).toBeUndefined(); // article
+    expect(lesson.lesson.items.filter((i) => i.id === 'kaufen')).toHaveLength(1); // repeated word appears once
+  });
+  it('turns phrases into phrase items with their explanation', () => {
+    if (!lesson.ok) return;
+    expect(lesson.lesson.items.find((i) => i.kind === 'phrase')).toMatchObject({ de: 'Wie geht es dir?', en: 'How are you?', notes: 'literally: how goes it to you' });
+  });
+  it('builds listening and word-order exercises from the video lines', () => {
+    if (!lesson.ok) return;
+    const types = lesson.lesson.exercises.map((e) => e.type);
+    expect(types).toContain('listen_choose');
+    expect(types).toContain('word_order');
+    const lc = lesson.lesson.exercises.find((e) => e.type === 'listen_choose');
+    if (lc?.type === 'listen_choose') expect(lc.options[lc.correct]).toBe(r.video.segments.find((s) => s.text === lc.audio)!.translation);
+    expect(lesson.lesson.id).toBe('video-kRq3WzSwUw0');
   });
 });
