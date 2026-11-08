@@ -1,17 +1,21 @@
-import { FileUp, Languages, LayoutDashboard, Library, SlidersHorizontal } from 'lucide-react';
-import type { ComponentType } from 'react';
+import { Clapperboard, FileUp, Languages, LayoutDashboard, Library, SlidersHorizontal } from 'lucide-react';
+import { useEffect, type ComponentType } from 'react';
 import type { Stage } from '../core/session';
 import { HomePage } from './HomePage';
-import { href, useRoute } from './hooks';
+import { href, navigate, useRoute } from './hooks';
 import { ImportPage } from './ImportPage';
 import { LessonDetail } from './LessonDetail';
 import { LessonsPage } from './LessonsPage';
 import { SettingsPage } from './SettingsPage';
 import { StudyRoute } from './study/StudyRoute';
+import { installExtensionBridge } from './videos/bridge';
+import { VideoPlayerPage } from './videos/VideoPlayerPage';
+import { VideosPage } from './videos/VideosPage';
 
 const NAV: { id: string; label: string; to: string; icon: ComponentType<{ size?: number }> }[] = [
   { id: '', label: 'Home', to: href(''), icon: LayoutDashboard },
   { id: 'lessons', label: 'Lessons', to: href('lessons'), icon: Library },
+  { id: 'videos', label: 'Videos', to: href('videos'), icon: Clapperboard },
   { id: 'import', label: 'Import', to: href('import'), icon: FileUp },
   { id: 'settings', label: 'Settings', to: href('settings'), icon: SlidersHorizontal },
 ];
@@ -19,6 +23,9 @@ const NAV: { id: string; label: string; to: string; icon: ComponentType<{ size?:
 export function App() {
   const route = useRoute();
   const [section = '', arg] = route.path;
+
+  // Subtitles sent by the browser extension land here and open straight in the player.
+  useEffect(() => installExtensionBridge((id) => navigate(href(`videos/${id}`))), []);
 
   // Study sessions are full screen, without the app chrome.
   if (section === 'study') {
@@ -44,9 +51,10 @@ export function App() {
           ))}
         </nav>
       </aside>
-      <main className="content">
+      <main className={`content ${section === 'videos' ? 'wide' : ''}`}>
         {section === '' && <HomePage />}
         {section === 'lessons' && (arg ? <LessonDetail key={arg} lessonId={arg} /> : <LessonsPage />)}
+        {section === 'videos' && (arg ? <VideoPlayerPage key={arg} videoId={arg} /> : <VideosPage />)}
         {section === 'import' && <ImportPage />}
         {section === 'settings' && <SettingsPage />}
       </main>
