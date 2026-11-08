@@ -97,13 +97,30 @@ export async function scrapeYouTube(preferredLang: string): Promise<ScrapedVideo
       button = findButton();
     }
     if (button) {
+      log.push(`clicking "${(button.getAttribute('aria-label') || button.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60)}" <${button.tagName.toLowerCase()}>`);
       button.click();
       log.push('opened YouTube’s transcript panel');
-      for (let i = 0; i < 60 && !(rows = readPanel()).length; i++) await sleep(250);
-      if (rows.length) await sleep(400); // let the panel finish rendering
-      rows = readPanel();
     } else {
       log.push('no "Show transcript" button on this page');
+    }
+    // Some layouts keep the panel collapsed: ask it to expand directly.
+    const panelEl = document.querySelector('ytd-engagement-panel-section-list-renderer[target-id*="transcript"]');
+    if (panelEl && panelEl.getAttribute('visibility') !== 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED') {
+      panelEl.setAttribute('visibility', 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED');
+      log.push('expanded the transcript panel');
+    }
+    for (let i = 0; i < 80 && !(rows = readPanel()).length; i++) await sleep(250);
+    if (rows.length) await sleep(400); // let the panel finish rendering
+    rows = readPanel();
+    if (!rows.length) {
+      // Diagnostics: what does the panel contain? (helps adapt the selectors when YouTube changes)
+      const panels = [...document.querySelectorAll('ytd-engagement-panel-section-list-renderer')].map((p) => p.getAttribute('target-id') || '?');
+      log.push(`engagement panels on page: ${panels.join(', ') || 'none'}`);
+      const t = document.querySelector('[target-id*="transcript"]');
+      if (t) {
+        log.push(`transcript panel visibility=${t.getAttribute('visibility')}; text: ${(t.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 300)}`);
+        log.push(`transcript panel html: ${t.innerHTML.replace(/\s+/g, ' ').slice(0, 1500)}`);
+      }
     }
   }
   if (rows.length) {
