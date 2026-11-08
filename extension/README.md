@@ -46,11 +46,12 @@ Open them from the popup (**Settings**) or at the bottom of the job page.
 | --- | --- | --- |
 | AI chat | ChatGPT | ChatGPT uses a temporary chat, so nothing is added to your history. |
 | Chat URL | empty | Use a specific chat or project URL instead of a new chat. |
-| Your level | A2 | Decides which words get meanings. |
+| Your level | Complete beginner | Shapes the translations and meanings. |
+| Word meanings | Every word, every time | Every word of every line is explained, repeats included, with its dictionary form. "Only harder words" gives shorter answers. Phrases are always explained. |
 | Video language / code | German / `de` | The code picks the caption track if the panel can't be read. |
 | Translate into / code | English / `en` | |
 | App address | `http://localhost:5173` | Change it if your app runs on another port. |
-| Lines per message | 40 | Lower it if the AI cuts its answers short. |
+| Lines per message | 15 | Explaining every word makes answers long; lower it if the AI cuts its answers short. |
 | Close the AI tab when done | on | |
 | Also download the files | off | Downloads `.json` and `.srt` automatically. |
 
