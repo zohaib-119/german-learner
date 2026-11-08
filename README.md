@@ -174,6 +174,31 @@ On-screen buttons for **ä ö ü ß** are available wherever you type.
 - **Voice:** Piper (offline, default) or Edge (more natural, needs internet; uses an unofficial service that could change). If one fails, the other is tried.
 - **New words per session**, **auto-play audio**, and **strict capitalization** (off by default, so `brot` is accepted for `Brot`; umlauts may be typed as `ae/oe/ue/ss`).
 
+## Videos: learn from YouTube
+
+The **Videos** tab plays YouTube videos with learning subtitles. Each line is shown under the video; hover a word to see its meaning, show the translation when you need it, and replay, loop or slow down a line.
+
+![Video player](docs/screenshots/video-player.png)
+
+The subtitles are created by the browser extension in [`extension/`](extension/README.md):
+
+1. Open a YouTube video and click the extension (or right-click the page).
+2. It reads the video's transcript and asks your AI chat (ChatGPT or Claude, the account you're already logged in to) for translations and word meanings, a part at a time.
+3. It opens the result in the app. Timing and the original text always come from YouTube; the AI only adds translations and meanings.
+
+The extension needs no API key. Setup and troubleshooting are in [extension/README.md](extension/README.md). The file format, for making or editing subtitles yourself, is in [VIDEO_FORMAT.md](VIDEO_FORMAT.md). You can also import a plain `.srt` or `.vtt` with a YouTube link.
+
+| Key | In the player |
+| --- | --- |
+| `Space` | Play / pause |
+| `←` `→` | Previous / next line |
+| `R` | Replay the line |
+| `L` | Loop the line |
+| `A` | Pause after each line |
+| `T` | Show / hide the translation |
+
+Videos are embedded with YouTube's official player. The subtitles sit below it, never over it, and fullscreen keeps them visible.
+
 ## Configuration
 
 The only setting outside the app is the voice service address. Copy `.env.example` to `.env` to change it:
@@ -190,7 +215,10 @@ src/
   db/          IndexedDB (Dexie) tables and progress queries
   audio/       text-to-speech engines, player, settings
   exercises/   one component per exercise type + registry
+  core/video/  video subtitle format, transcript parsing, AI prompt and reply parsing (shared with the extension)
   ui/          pages, study screens, styles
+extension/     browser extension that creates video subtitles (see extension/README.md)
+e2e/           browser tests for the video player and the extension
 tts-service/   local FastAPI voice server (Piper, Edge) with an on-disk audio cache
 sample-lessons/  example lessons
 docs/screenshots/
@@ -207,13 +235,19 @@ npm run tts        # voice service
 npm test           # unit tests (schema, importer, grading, scheduling, sessions)
 npm run typecheck
 npm run build
+
+npm run ext:build          # build the extension into extension/dist
+npm run ext:watch          # rebuild the extension on change
+npm run ext:typecheck
+npm run e2e:video          # browser test of the video player (app running on :5174)
+npm run e2e:extension      # browser test of the whole extension flow against mock pages (app on :5174)
 ```
 
 Built with TypeScript, React, Vite, Dexie, Zod, ts-fsrs and lucide icons; the voice service uses FastAPI, Piper and edge-tts.
 
 ## Your data
 
-Lessons and progress live in your browser's IndexedDB. Generated audio is cached in `tts-service/cache/` (safe to delete; it is regenerated on demand). **There is no backup or export yet, so clearing site data erases your progress.**
+Lessons, videos and progress live in your browser's IndexedDB. Generated audio is cached in `tts-service/cache/` (safe to delete; it is regenerated on demand). **There is no backup or export yet, so clearing site data erases your progress.**
 
 ## Roadmap
 
