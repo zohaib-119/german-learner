@@ -4,3 +4,4 @@ dist
 tts-service/cache
 tts-service/voices
 __pycache__
+extension/dist

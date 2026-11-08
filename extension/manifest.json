@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Deutsch Trainer – Video Subtitles",
+  "version": "0.1.0",
+  "description": "Turns a YouTube video's transcript into learning subtitles (translations and word meanings) with your AI chat, then opens it in Deutsch Trainer.",
+  "action": {
+    "default_title": "Create learning subtitles",
+    "default_popup": "popup.html"
+  },
+  "background": { "service_worker": "background.js" },
+  "permissions": ["scripting", "storage", "tabs", "contextMenus"],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://m.youtube.com/*",
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://claude.ai/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*", "https://claude.ai/*"],
+      "js": ["ai-content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://localhost/*", "http://127.0.0.1/*"],
+      "js": ["app-content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

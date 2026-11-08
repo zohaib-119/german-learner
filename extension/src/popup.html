@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      body { margin: 0; width: 290px; font: 14px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #161a26; background: #fff; }
+      main { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+      h1 { font-size: 15px; margin: 0; }
+      p { margin: 0; color: #667085; }
+      button { font: inherit; font-weight: 600; padding: 10px 14px; border-radius: 10px; border: 0; background: #3355e0; color: #fff; cursor: pointer; }
+      button:hover { background: #2744c4; }
+      button[disabled] { opacity: .45; cursor: default; }
+      a { color: #3355e0; font-size: 13px; text-decoration: none; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Learning subtitles</h1>
+      <p id="hint">Open a YouTube video, then click here.</p>
+      <button id="go" disabled>Create subtitles for this video</button>
+      <a id="settings">Settings</a>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

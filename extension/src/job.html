@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Learning subtitles</title>
+    <link rel="stylesheet" href="job.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <img id="thumb" alt="" hidden />
+        <div>
+          <h1 id="title">Learning subtitles</h1>
+          <p id="subtitle" class="muted"></p>
+        </div>
+      </header>
+
+      <ol id="steps" class="steps">
+        <li data-step="transcript"><span class="dot"></span><div><b>Read the transcript</b><p class="detail"></p></div></li>
+        <li data-step="ai"><span class="dot"></span><div><b>Translate with <span id="provider-name">AI</span></b><p class="detail"></p><div class="bar" hidden><div class="bar-fill"></div></div></div></li>
+        <li data-step="build"><span class="dot"></span><div><b>Build the subtitle file</b><p class="detail"></p></div></li>
+        <li data-step="app"><span class="dot"></span><div><b>Open in Deutsch Trainer</b><p class="detail"></p></div></li>
+      </ol>
+
+      <section id="paste" class="card" hidden>
+        <h2>Paste the transcript</h2>
+        <p class="muted">On the YouTube page, open <b>…more → Show transcript</b>, select the whole transcript, copy it and paste it here. An .srt or .vtt file's text works too.</p>
+        <textarea id="paste-text" rows="10" placeholder="0:01&#10;Hallo und willkommen…"></textarea>
+        <div class="row">
+          <button id="paste-go" class="primary">Continue</button>
+          <span id="paste-error" class="error"></span>
+        </div>
+      </section>
+
+      <section id="result" class="card" hidden>
+        <div class="row">
+          <button id="send-again" class="primary" hidden>Send to app again</button>
+          <button id="dl-json">Download .json</button>
+          <button id="dl-srt">Download .srt (original)</button>
+          <button id="dl-srt-tr">Download .srt (translation)</button>
+        </div>
+        <p class="muted small">If the app did not open, drop the .json file onto its Videos page.</p>
+      </section>
+
+      <details id="settings" class="card">
+        <summary>Settings</summary>
+        <form id="settings-form">
+          <label>AI chat
+            <select name="provider"><option value="chatgpt">ChatGPT</option><option value="claude">Claude</option></select>
+          </label>
+          <label>Chat URL (optional)
+            <input name="chatUrl" placeholder="Leave empty for a new chat" />
+          </label>
+          <label>Your level
+            <select name="level"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select>
+          </label>
+          <label>Video language
+            <input name="sourceLanguage" />
+          </label>
+          <label>Language code
+            <input name="sourceLang" size="4" />
+          </label>
+          <label>Translate into
+            <input name="targetLanguage" />
+          </label>
+          <label>Code
+            <input name="targetLang" size="4" />
+          </label>
+          <label>App address
+            <input name="appUrl" />
+          </label>
+          <label>Lines per message
+            <input name="chunkSize" type="number" min="2" max="120" />
+          </label>
+          <label class="check"><input name="closeAiTab" type="checkbox" /> Close the AI tab when done</label>
+          <label class="check"><input name="downloadFiles" type="checkbox" /> Also download the files</label>
+          <div class="row"><button class="primary" type="submit">Save</button><span id="saved" class="muted small"></span></div>
+        </form>
+      </details>
+
+      <details class="card">
+        <summary>Details</summary>
+        <ol id="log" class="log"></ol>
+      </details>
+    </main>
+    <script src="job.js"></script>
+  </body>
+</html>
