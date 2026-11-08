@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { Card } from 'ts-fsrs';
 import type { NormalizedExercise, NormalizedItem, NormalizedLesson } from '../core/importer';
+import type { VideoFile } from '../core/video/schema';
 
 export interface LessonRow {
   id: string;
@@ -47,6 +48,13 @@ export interface ReviewRow {
   ms: number;
   mode: string;
 }
+/** A video with its own subtitles. Completely separate from lessons, items and cards. */
+export type VideoRow = VideoFile & {
+  createdAt: number;
+  /** Playback position (seconds) to resume from. */
+  lastTime?: number | undefined;
+};
+
 export interface SettingRow {
   key: string;
   value: unknown;
@@ -60,6 +68,7 @@ export class AppDB extends Dexie {
   exerciseStats!: EntityTable<ExerciseStatRow, 'id'>;
   reviews!: EntityTable<ReviewRow, 'seq'>;
   settings!: EntityTable<SettingRow, 'key'>;
+  videos!: EntityTable<VideoRow, 'id'>;
 
   constructor(name = 'german-learner') {
     super(name);
@@ -72,6 +81,8 @@ export class AppDB extends Dexie {
       reviews: '++seq, cardId, ts',
       settings: 'key',
     });
+    // v2: videos with their own subtitles (separate from the lesson tables).
+    this.version(2).stores({ videos: 'id, createdAt' });
   }
 }
 
@@ -142,4 +153,16 @@ export async function deleteLesson(database: AppDB, lessonId: string): Promise<v
       await database.exerciseStats.where('lessonId').equals(lessonId).delete();
     },
   );
+}
+
+/** Saves (or replaces) a video's subtitles. Keeps the original creation time and resume position. */
+export async function saveVideo(database: AppDB, video: VideoFile): Promise<VideoRow> {
+  const existing = await database.videos.get(video.id);
+  const row: VideoRow = { ...video, createdAt: existing?.createdAt ?? Date.now(), lastTime: existing?.lastTime };
+  await database.videos.put(row);
+  return row;
+}
+
+export async function deleteVideo(database: AppDB, id: string): Promise<void> {
+  await database.videos.delete(id);
 }
