@@ -39,14 +39,25 @@ try {
   ok('settings saved', true);
 
   const tabIdFor = (urlPattern) => settings.evaluate(async (u) => (await chrome.tabs.query({ url: u }))[0]?.id, urlPattern);
-  const runJob = async (videoId) => {
+  const runJob = async (videoId, extra = '') => {
     const yt = await ctx.newPage();
     await yt.goto(`${MOCK}/watch?v=${videoId}`);
     const tabId = await tabIdFor(`${MOCK}/watch*`);
     const job = await ctx.newPage();
-    await job.goto(ext(`job.html?tab=${tabId}`));
+    await job.goto(ext(`job.html?tab=${tabId}${extra}`));
     return { yt, job };
   };
+  const chatTabsOpened = () => settings.evaluate(async (u) => (await chrome.tabs.query({ url: u })).length, `${MOCK}/chat*`);
+
+  // popup: choosing the AI is remembered
+  const pop = await ctx.newPage();
+  await pop.goto(ext('popup.html'));
+  await pop.click('[data-provider="claude"]');
+  ok('popup switches to Claude', (await pop.getAttribute('[data-provider="claude"]', 'aria-checked')) === 'true');
+  ok('choice is saved', (await settings.evaluate(async () => (await chrome.storage.local.get('settings')).settings.provider)) === 'claude');
+  await pop.click('[data-provider="chatgpt"]');
+  ok('and back to ChatGPT', (await settings.evaluate(async () => (await chrome.storage.local.get('settings')).settings.provider)) === 'chatgpt');
+  await pop.close();
 
   // ---- 1. full automatic run --------------------------------------------------------------------
   const { yt, job } = await runJob('kRq3WzSwUw0');
@@ -78,6 +89,23 @@ try {
   ok('downloadable .json is a valid video file', saved.kind === 'video' && saved.video.id === 'kRq3WzSwUw0' && saved.segments.every((s) => s.translation));
   ok('timing comes from YouTube, not the AI', saved.segments[0].start === 0 && saved.segments.at(-1).start >= 20);
   await yt.close();
+
+  // ---- 1b. same video again: no AI, straight to the app from the saved library -------------------
+  ok('finished video saved in the extension library', (await settings.evaluate(async () => !!(await chrome.storage.local.get('video:kRq3WzSwUw0'))['video:kRq3WzSwUw0'])));
+  for (const pg of ctx.pages()) if (pg.url().startsWith(APP_URL)) await pg.close();
+  const again = await runJob('kRq3WzSwUw0', '&video=kRq3WzSwUw0');
+  await again.job.waitForSelector('[data-step="app"][data-state="done"], [data-step="app"][data-state="error"]', { timeout: 30_000 });
+  ok('second run reuses the saved subtitles', /Saved earlier/.test(await again.job.locator('[data-step="build"] .detail').innerText()));
+  ok('second run does not open the AI chat', (await chatTabsOpened()) === 0);
+  ok('second run opens the video in the app', ctx.pages().some((pg) => pg.url().includes('/#/videos/yt-kRq3WzSwUw0')));
+  await again.yt.close();
+
+  // ---- 1c. "Create again" redoes it --------------------------------------------------------------
+  const redo = await runJob('kRq3WzSwUw0', '&video=kRq3WzSwUw0&mode=new');
+  await redo.job.waitForSelector('[data-step="ai"][data-state="active"], [data-step="ai"][data-state="done"]', { timeout: 30_000 });
+  await redo.job.waitForSelector('[data-step="app"][data-state="done"], [data-state="error"]', { timeout: 90_000 });
+  ok('"Create again" goes through the AI again', /translated in/.test(await redo.job.locator('[data-step="ai"] .detail').innerText()));
+  await redo.yt.close();
 
   // ---- 2. no transcript on the page -> paste fallback ---------------------------------------------
   const run2 = await runJob('abcdefghijk');
