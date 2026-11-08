@@ -4,8 +4,9 @@ import { buildVideoFile } from '../../src/core/video/build';
 import { mergeCues, type Line } from '../../src/core/video/lines';
 import { buildPrompt, buildRetryPrompt, chunkLines, missingLines, parseAiReply, type AiItem } from '../../src/core/video/prompt';
 import { normalizeVideo, type VideoFile } from '../../src/core/video/schema';
-import { parseTranscriptText, toSrt, type Cue } from '../../src/core/video/subtitles';
+import { parseTranscriptText, toSrt, videoIdFromUrl, type Cue } from '../../src/core/video/subtitles';
 import type { AiAskResult, AppDeliverResult } from './messages';
+import { getEntry, putEntry } from './library';
 import { PROVIDERS, chatUrlFor, loadSettings, saveSettings, type ExtSettings } from './settings';
 import { scrapeYouTube, type ScrapedVideo } from './youtube-scrape';
 
@@ -223,7 +224,36 @@ async function main() {
   $('#provider-name').textContent = PROVIDERS[s.provider].name;
   let current: Step = 'transcript';
   let aiTabId: number | undefined;
+
+  const deliver = async (video: VideoFile) => {
+    current = 'app';
+    const deliverOnce = () =>
+      sendToApp(video, s).catch((e) => {
+        step('app', 'error', `${errorText(e)}\nIs the app running at ${s.appUrl}? You can change the address in Settings.`);
+        $('#send-again').hidden = false;
+      });
+    $('#send-again').onclick = () => {
+      $('#send-again').hidden = true;
+      void deliverOnce();
+    };
+    await deliverOnce();
+  };
+
   try {
+    // Already made for this video? Then skip straight to the app (unless "Create again" was chosen).
+    const tabUrl = params.get('video') ?? (await chrome.tabs.get(tabId).catch(() => null))?.url ?? '';
+    const knownId = videoIdFromUrl(tabUrl);
+    const existing = knownId && params.get('mode') !== 'new' ? await getEntry(knownId) : null;
+    if (existing) {
+      showVideo({ videoId: knownId!, title: existing.video.title, channel: existing.video.channel, duration: existing.video.duration, tracks: [] });
+      const when = new Date(existing.createdAt).toLocaleString();
+      for (const st of ['transcript', 'ai', 'build'] as Step[]) step(st, 'done', st === 'build' ? `Saved earlier (${when}, ${existing.provider}) · ${existing.video.segments.length} lines` : 'Already done earlier');
+      log(`using saved subtitles from ${when}; choose "Create again" in the popup to redo them`);
+      offerFiles(existing.video, s);
+      await deliver(existing.video);
+      return;
+    }
+
     const { meta, cues } = await readTranscript(tabId, s);
     const lines = mergeCues(cues);
     log(`merged into ${lines.length} subtitle lines`);
@@ -243,22 +273,11 @@ async function main() {
     );
     if (!parsed.ok) throw new Error(parsed.errors.join('\n'));
     const video = parsed.video;
-    await chrome.storage.local.set({ lastVideo: video });
-    step('build', 'done', `${video.segments.length} lines${parsed.warnings.length ? ` · ${parsed.warnings.join('; ')}` : ''}`);
+    await putEntry(video, PROVIDERS[s.provider].name);
+    step('build', 'done', `${video.segments.length} lines${parsed.warnings.length ? ` · ${parsed.warnings.join('; ')}` : ''} · saved`);
     offerFiles(video, s);
     if (s.closeAiTab && aiTabId !== undefined) await chrome.tabs.remove(aiTabId).catch(() => {});
-
-    current = 'app';
-    const deliverOnce = () =>
-      sendToApp(video, s).catch((e) => {
-        step('app', 'error', `${errorText(e)}\nIs the app running at ${s.appUrl}? You can change the address in Settings.`);
-        $('#send-again').hidden = false;
-      });
-    $('#send-again').onclick = () => {
-      $('#send-again').hidden = true;
-      void deliverOnce();
-    };
-    await deliverOnce();
+    await deliver(video);
   } catch (e) {
     step(current, 'error', errorText(e));
     log(`stopped: ${errorText(e)}`);
