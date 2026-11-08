@@ -1,6 +1,6 @@
 import { videoIdFromUrl } from '../../src/core/video/subtitles';
 import { getEntry } from './library';
-import { PROVIDERS, loadSettings, saveSettings, type Provider } from './settings';
+import { LEVEL_NAMES, PROVIDERS, loadSettings, saveSettings, type Provider } from './settings';
 
 const isVideo = (url = '') => /^https:\/\/(www|m)\.youtube\.com\/(watch\?|shorts\/)/.test(url);
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -43,7 +43,7 @@ async function init() {
       hint.textContent = `Subtitles ready · made ${new Date(entry.createdAt).toLocaleDateString()} with ${entry.provider}`;
     } else {
       hint.className = '';
-      hint.textContent = `${s.level} · into ${s.targetLanguage} with ${PROVIDERS[s.provider].name}`;
+      hint.textContent = `${LEVEL_NAMES[s.level] ?? s.level} · ${s.glossMode === 'all' ? 'every word explained' : 'harder words'} · ${PROVIDERS[s.provider].name}`;
     }
   }
 

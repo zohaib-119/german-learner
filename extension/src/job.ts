@@ -139,7 +139,7 @@ function showVideo(meta: ScrapedVideo['meta']) {
 async function translate(lines: Line[], s: ExtSettings, title: string): Promise<{ replies: AiItem[]; aiTabId: number }> {
   const provider = PROVIDERS[s.provider].name;
   const chunks = chunkLines(lines, { maxLines: s.chunkSize });
-  const options = { level: s.level, sourceLanguage: s.sourceLanguage, targetLanguage: s.targetLanguage, title };
+  const options = { level: s.level, glossMode: s.glossMode, sourceLanguage: s.sourceLanguage, targetLanguage: s.targetLanguage, title };
   step('ai', 'active', `Opening ${provider}…`);
   const tab = await chrome.tabs.create({ url: chatUrlFor(s), active: true });
   const aiTabId = tab.id!;
