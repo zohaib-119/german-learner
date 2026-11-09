@@ -1,4 +1,4 @@
-// Content script for the Deutsch Trainer app (localhost). Forwards finished subtitles or a lesson to
+// Content script for the German Learner app (localhost). Forwards finished subtitles or a lesson to
 // the page, which validates and stores them (see src/ui/videos/bridge.ts in the app).
 import type { AppDeliver, AppDeliverResult, DeliverKind } from './messages';
 
@@ -11,7 +11,7 @@ function deliver(payload: unknown, kind: DeliverKind): Promise<AppDeliverResult>
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
       window.removeEventListener('message', onMessage);
-      resolve({ ok: false, error: 'The page did not answer. Is this the Deutsch Trainer app, and is it up to date?' });
+      resolve({ ok: false, error: 'The page did not answer. Is this the German Learner app, and is it up to date?' });
     }, 15_000);
     function onMessage(e: MessageEvent) {
       const d = e.data as { source?: string; type?: string; requestId?: string; ok?: boolean; id?: string; errors?: string[]; warnings?: string[] } | null;

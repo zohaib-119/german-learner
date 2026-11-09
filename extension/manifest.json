@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Deutsch Trainer \u2013 Video Subtitles",
+  "name": "German Learner \u2013 Video Subtitles and Lessons",
   "version": "0.1.0",
-  "description": "Turns a YouTube video's transcript into learning subtitles (translations and word meanings) with your AI chat, then opens it in Deutsch Trainer.",
+  "description": "Turns a YouTube video into learning subtitles or a word lesson with your AI chat, then opens it in the German Learner app.",
   "action": {
     "default_title": "Create learning subtitles",
     "default_popup": "popup.html"

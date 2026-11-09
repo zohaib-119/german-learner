@@ -12,7 +12,7 @@ export interface ExtSettings {
   sourceLang: string;
   targetLanguage: string;
   targetLang: string;
-  /** Where Deutsch Trainer runs. */
+  /** Where the German Learner app runs. */
   appUrl: string;
   /** Subtitle lines sent per AI message. */
   chunkSize: number;

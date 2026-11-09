@@ -41,7 +41,7 @@ export function App() {
       <aside className="sidebar">
         <a className="brand" href={href('')}>
           <Languages size={24} />
-          <span>Deutsch</span>
+          <span>German Learner</span>
         </a>
         <nav>
           {NAV.map(({ id, label, to, icon: Icon }) => (
