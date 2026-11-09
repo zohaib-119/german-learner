@@ -124,6 +124,9 @@ export async function saveLesson(database: AppDB, lesson: NormalizedLesson): Pro
         await database.items.bulkDelete(removed);
         await database.cards.where('itemUid').anyOf(removed).delete();
       }
+      // An item that no longer has an example loses its example-sentence card too.
+      const noExample = itemRows.filter((r) => !r.example?.de).map((r) => `${r.uid}#ex_listen`);
+      if (noExample.length) await database.cards.bulkDelete(noExample);
       await database.items.bulkPut(itemRows);
 
       const exRows: ExerciseRow[] = lesson.exercises.map((ex, order) => ({ ...ex, uid: `${lesson.id}:${ex.id}`, lessonId: lesson.id, order }));

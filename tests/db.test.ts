@@ -39,6 +39,17 @@ describe('saveLesson', () => {
     expect((await db.items.get('l1:hund'))?.en).toBe('dog (edited)');
   });
 
+  it('re-import drops the example card of an item whose example was removed', async () => {
+    await saveLesson(db, lesson(`id: l1\ntitle: L\nitems:\n  - { de: Hund, en: dog, example: { de: Der Hund bellt., en: The dog barks. } }\n`));
+    await db.cards.bulkPut([
+      { id: 'l1:hund#de_en', itemUid: 'l1:hund', lessonId: 'l1', mode: 'de_en', due: 0, fsrs: newCard(), lapses: 0 },
+      { id: 'l1:hund#ex_listen', itemUid: 'l1:hund', lessonId: 'l1', mode: 'ex_listen', due: 0, fsrs: newCard(), lapses: 0 },
+    ]);
+    await saveLesson(db, lesson(`id: l1\ntitle: L\nitems:\n  - { de: Hund, en: dog }\n`));
+    expect(await db.cards.get('l1:hund#de_en')).toBeTruthy();
+    expect(await db.cards.get('l1:hund#ex_listen')).toBeUndefined();
+  });
+
   it('preserves the enabled flag on re-import and deleteLesson cleans up', async () => {
     await saveLesson(db, lesson(`id: l1\ntitle: L\nitems:\n  - { de: Hund, en: dog }\n`));
     await db.lessons.update('l1', { enabled: false });
