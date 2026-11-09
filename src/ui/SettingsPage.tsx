@@ -31,7 +31,7 @@ export function SettingsPage() {
   return (
     <>
       <PageHeader title="Settings" />
-
+      <div className="settings-grid">
       <section className="card settings">
         <h2>Voice</h2>
         <div className="segmented" role="radiogroup" aria-label="Voice engine">
@@ -83,6 +83,7 @@ export function SettingsPage() {
           <Switch label="Strict capitalization" checked={learning.strictCaps} onChange={async (v) => setLearning(await saveLearningSettings({ strictCaps: v }))} />
         </div>
       </section>
+      </div>
     </>
   );
 }

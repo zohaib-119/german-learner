@@ -51,7 +51,7 @@ export function App() {
           ))}
         </nav>
       </aside>
-      <main className={`content ${section === 'videos' ? 'wide' : ''}`}>
+      <main className="content">
         {section === '' && <HomePage />}
         {section === 'lessons' && (arg ? <LessonDetail key={arg} lessonId={arg} /> : <LessonsPage />)}
         {section === 'videos' && (arg ? <VideoPlayerPage key={arg} videoId={arg} /> : <VideosPage />)}
