@@ -144,7 +144,7 @@ const tips = await p.locator('.vid-bar .gloss-tip').allTextContents();
 ok('tooltip shows the dictionary form too', tips.some((t) => t === 'the baker · der Bäcker'), JSON.stringify(tips));
 const [ly] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: /Lesson file/ }).click()]);
 const yamlText = fs.readFileSync(await ly.path(), 'utf8');
-ok('lesson file downloads in the lesson format', /^schema_version: 1/m.test(yamlText) && /items:/.test(yamlText) && /type: listen_choose/.test(yamlText));
+ok('lesson file downloads in the lesson format, words only', /^schema_version: 1/m.test(yamlText) && /items:/.test(yamlText) && !/type: /.test(yamlText) && !/example:/.test(yamlText));
 
 // SRT download
 const [dl] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: /^SRT/ }).click()]);
@@ -156,8 +156,10 @@ await p.waitForSelector('.stages');
 ok('Create lesson opens a lesson built from the video', p.url().includes('/lessons/video-kRq3WzSwUw0') && /Video · Test video/.test(await p.locator('h1').innerText()));
 const words = await p.locator('.row-item').allInnerTexts();
 ok('lesson has the video words with articles', words.some((w) => /der\s+Bäcker/.test(w)) && words.some((w) => /aufstehen/.test(w)), `${words.length} words`);
-await p.getByRole('tab', { name: /Exercises/ }).click();
-ok('lesson has exercises from the video lines', (await p.locator('.row-item').count()) > 0);
+ok('video lesson is words only, without a Sentences stage or tabs',
+  (await p.locator('.stage-card').count()) === 1 && (await p.getByRole('tab').count()) === 0);
+const titles = await p.locator('.row-title').allInnerTexts();
+ok('every word is listed once', new Set(titles).size === titles.length, `${titles.length} items`);
 await p.goto(`${B}/videos/yt-kRq3WzSwUw0`); await p.waitForSelector('.vid-layout'); await sleep(400);
 
 // resume position

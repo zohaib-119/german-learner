@@ -38,6 +38,8 @@ export function LessonDetail({ lessonId }: { lessonId: string }) {
   const wordItems = items.filter(isWordItem);
   const sentenceItems = items.filter((i) => !isWordItem(i));
   const examples = items.filter((i) => isWordItem(i) && i.example?.de);
+  // Words-only lessons (e.g. made from a video) have no Sentences stage at all.
+  const hasSentences = sentences.total + progress.exercises.total > 0;
 
   const status = (uid: string) => {
     const c = cards.get(cardId(uid, 'de_en'));
@@ -99,35 +101,37 @@ export function LessonDetail({ lessonId }: { lessonId: string }) {
             <Play size={16} /> {words.seen === 0 ? 'Start' : 'Continue'} {progress.due.words > 0 && <span className="badge">{progress.due.words}</span>}
           </a>
         </div>
-        <div className={`stage-card ${unlocked ? '' : 'is-locked'}`}>
-          <div className="stage-head">
-            {unlocked ? <MessageSquareText size={20} /> : <Lock size={20} />} <h2>Sentences</h2>
-            <span className="muted">
-              {sentences.seen + progress.exercises.seen}/{sentences.total + progress.exercises.total}
-            </span>
-          </div>
-          <ProgressBar value={sentences.seen + progress.exercises.seen} max={sentences.total + progress.exercises.total} label="Sentences practised" />
-          {unlocked ? (
-            <a className="btn primary" href={href('study/sentences', { lesson: lessonId })}>
-              <Play size={16} /> Practise {progress.due.sentences > 0 && <span className="badge">{progress.due.sentences}</span>}
-            </a>
-          ) : (
-            <div className="row">
-              <span className="muted inline">
-                <Lock size={16} /> {Math.round(UNLOCK_RATIO * 100)}% of words
+        {hasSentences && (
+          <div className={`stage-card ${unlocked ? '' : 'is-locked'}`}>
+            <div className="stage-head">
+              {unlocked ? <MessageSquareText size={20} /> : <Lock size={20} />} <h2>Sentences</h2>
+              <span className="muted">
+                {sentences.seen + progress.exercises.seen}/{sentences.total + progress.exercises.total}
               </span>
-              <button
-                className="btn ghost sm"
-                onClick={async () => {
-                  await unlockSentences(db, lessonId);
-                  reload();
-                }}
-              >
-                <LockOpen size={16} /> Unlock
-              </button>
             </div>
-          )}
-        </div>
+            <ProgressBar value={sentences.seen + progress.exercises.seen} max={sentences.total + progress.exercises.total} label="Sentences practised" />
+            {unlocked ? (
+              <a className="btn primary" href={href('study/sentences', { lesson: lessonId })}>
+                <Play size={16} /> Practise {progress.due.sentences > 0 && <span className="badge">{progress.due.sentences}</span>}
+              </a>
+            ) : (
+              <div className="row">
+                <span className="muted inline">
+                  <Lock size={16} /> {Math.round(UNLOCK_RATIO * 100)}% of words
+                </span>
+                <button
+                  className="btn ghost sm"
+                  onClick={async () => {
+                    await unlockSentences(db, lessonId);
+                    reload();
+                  }}
+                >
+                  <LockOpen size={16} /> Unlock
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="practice">
@@ -150,19 +154,26 @@ export function LessonDetail({ lessonId }: { lessonId: string }) {
         </div>
       </section>
 
-      <div className="tabs" role="tablist">
-        {(
-          [
-            ['words', 'Words', wordItems.length],
-            ['sentences', 'Sentences', sentenceItems.length + examples.length],
-            ['exercises', 'Exercises', exercises.length],
-          ] as const
-        ).map(([id, label, n]) => (
-          <button key={id} role="tab" aria-selected={tab === id} className={`tab ${tab === id ? 'active' : ''}`} onClick={() => setTab(id)}>
-            {label} <span className="count">{n}</span>
-          </button>
-        ))}
-      </div>
+      {hasSentences && (
+        <div className="tabs" role="tablist">
+          {(
+            [
+              ['words', 'Words', wordItems.length],
+              ['sentences', 'Sentences', sentenceItems.length + examples.length],
+              ['exercises', 'Exercises', exercises.length],
+            ] as const
+          ).map(([id, label, n]) => (
+            <button key={id} role="tab" aria-selected={tab === id} className={`tab ${tab === id ? 'active' : ''}`} onClick={() => setTab(id)}>
+              {label} <span className="count">{n}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {!hasSentences && (
+        <h2 className="section-title">
+          Words <span className="count">{wordItems.length}</span>
+        </h2>
+      )}
 
       {tab === 'words' &&
         (wordItems.length === 0 ? (
@@ -192,18 +203,27 @@ export function LessonDetail({ lessonId }: { lessonId: string }) {
           <EmptyState icon={<MessageSquareText size={32} />} title="No sentences" />
         ) : (
           <div className="list">
-            {[...sentenceItems.map((it) => ({ it, de: spokenText(it), en: it.en })), ...examples.map((it) => ({ it, de: it.example!.de, en: it.example!.en ?? '' }))].map(
-              ({ it, de, en }, i) => (
-                <div key={`${it.uid}:${i}`} className="row-item">
-                  <div className="row-main">
-                    <div className="row-title">
-                      {de} <SpeakButton text={de} compact />
-                    </div>
-                    {en && <div className="muted">{en}</div>}
+            {[
+              ...sentenceItems.map((it) => ({
+                it,
+                de: spokenText(it),
+                en: it.en,
+              })),
+              ...examples.map((it) => ({
+                it,
+                de: it.example!.de,
+                en: it.example!.en ?? '',
+              })),
+            ].map(({ it, de, en }, i) => (
+              <div key={`${it.uid}:${i}`} className="row-item">
+                <div className="row-main">
+                  <div className="row-title">
+                    {de} <SpeakButton text={de} compact />
                   </div>
+                  {en && <div className="muted">{en}</div>}
                 </div>
-              ),
-            )}
+              </div>
+            ))}
           </div>
         ))}
 
