@@ -357,8 +357,9 @@ function Player({ video, lexicon }: { video: VideoRow; lexicon: ReturnType<typeo
             <button className={`icon-btn ${showTr ? 'on' : ''}`} title="Show translation (T)" aria-label="Show translation" aria-pressed={showTr} onClick={() => setShowTr(!showTr)}>
               {showTr ? <Eye size={20} /> : <EyeOff size={20} />}
             </button>
+            <span className="vid-right">
             <span className="vid-rate" title="Speed">
-              <Gauge size={18} />
+              <Gauge size={18} className="vid-rate-icon" />
               {RATES.map((r) => (
                 <button key={r} className={`rate-chip ${rate === r ? 'on' : ''}`} onClick={() => setSpeed(r)}>
                   {r}×
@@ -368,6 +369,7 @@ function Player({ video, lexicon }: { video: VideoRow; lexicon: ReturnType<typeo
             <button className="icon-btn" title="Fullscreen" aria-label="Fullscreen" onClick={toggleFullscreen}>
               {fullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
             </button>
+            </span>
           </div>
           <div className="vid-title-row">
             <div>
@@ -419,7 +421,7 @@ function Player({ video, lexicon }: { video: VideoRow; lexicon: ReturnType<typeo
               </button>
             ))}
           </div>
-          <div className="muted small" title={formatTimestamp(video.duration ?? 0)}>
+          <div className="muted small vid-keys" title={formatTimestamp(video.duration ?? 0)}>
             Keys: Space play · ← → line · R replay · L loop · T translation · A pause after line
           </div>
         </aside>

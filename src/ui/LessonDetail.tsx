@@ -64,6 +64,7 @@ export function LessonDetail({ lessonId }: { lessonId: string }) {
           )}
         </div>
         <div className="page-actions">
+          <span className="muted small">In review</span>
           <Switch
             label="Include in review"
             checked={lesson.enabled}
@@ -88,7 +89,7 @@ export function LessonDetail({ lessonId }: { lessonId: string }) {
         </div>
       </div>
 
-      <section className="stages">
+      <section className={`stages ${hasSentences ? '' : 'single'}`}>
         <div className="stage-card">
           <div className="stage-head">
             <Layers size={20} /> <h2>Words</h2>

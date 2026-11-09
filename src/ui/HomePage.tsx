@@ -30,7 +30,7 @@ export function HomePage() {
     <>
       <PageHeader title="Home" />
       <section className="stats">
-        <div className="stat">
+        <div className="stat stat-due">
           <span className="stat-icon due">
             <Clock size={20} />
           </span>

@@ -46,7 +46,7 @@ export function VideosPage() {
     <>
       <PageHeader title="Videos" />
       <div
-        className={`drop ${dragging ? 'dragging' : ''}`}
+        className={`drop ${dragging ? 'dragging' : ''} ${videos?.length ? 'compact' : ''}`}
         onDragOver={(e) => {
           e.preventDefault();
           setDragging(true);
@@ -58,10 +58,10 @@ export function VideosPage() {
           void readFiles(e.dataTransfer.files);
         }}
       >
-        <FileUp size={32} />
+        <FileUp size={videos?.length ? 20 : 32} />
         <p>Drop a subtitle file from the extension (.json), or a plain .srt / .vtt</p>
         <label className="btn sm">
-          Browse
+          {videos?.length ? 'Import a file' : 'Browse'}
           <input type="file" hidden accept=".json,.yaml,.yml,.srt,.vtt" onChange={(e) => e.target.files && void readFiles(e.target.files)} />
         </label>
       </div>
