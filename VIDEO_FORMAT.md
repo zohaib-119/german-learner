@@ -62,7 +62,7 @@ Each segment:
 
 By default the extension asks the AI to explain **every word of every line**, repeats included, so a complete beginner never has to look back. Choose "Only harder words" in the extension settings for less.
 
-**Create lesson** on the video page turns a video into a normal lesson. Its content words and phrases become word and phrase items, using the video line as the example, and its sentences become listen-and-choose and word-order exercises. **Lesson file** downloads the same lesson in the [lesson format](LESSON_FORMAT.md).
+**Create lesson** on the video page turns a video into a words-only lesson: its content words and phrases become word and phrase items, each once. Spoken lines are often not proper written sentences, so they are not used as examples or exercises; the lesson has no Sentences stage. **Lesson file** downloads the same lesson in the [lesson format](LESSON_FORMAT.md).
 
 Words you have learned in your lessons are also highlighted with their meaning automatically (green underline), so the glossary only needs the words you haven't met yet.
 

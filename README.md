@@ -186,7 +186,7 @@ The subtitles are created by the browser extension in [`extension/`](extension/R
 2. It reads the video's transcript and asks your AI chat (ChatGPT or Claude, the account you're already logged in to) for translations and word meanings, a part at a time.
 3. It opens the result in the app. Timing and the original text always come from YouTube; the AI only adds translations and meanings.
 
-On the video page, **Create lesson** turns the video's words and phrases into a normal lesson, with exercises made from its sentences, so you can learn the words first and then watch. **Lesson file** downloads it in the lesson format.
+On the video page, **Create lesson** turns the video's words and phrases into a words-only lesson (each word once, spoken lines are not used as example sentences), so you can learn the words first and then watch. **Lesson file** downloads it in the lesson format.
 
 The extension needs no API key. Setup and troubleshooting are in [extension/README.md](extension/README.md). The file format, for making or editing subtitles yourself, is in [VIDEO_FORMAT.md](VIDEO_FORMAT.md). You can also import a plain `.srt` or `.vtt` with a YouTube link.
 
