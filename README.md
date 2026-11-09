@@ -52,15 +52,21 @@ It works on a phone-sized screen too:
 | :--: | :--: | :--: |
 | <img src="docs/screenshots/mobile-home.png" alt="Home on a phone" width="250"> | <img src="docs/screenshots/mobile-reading.png" alt="Reading card on a phone" width="250"> | <img src="docs/screenshots/mobile-video.png" alt="Video player on a phone" width="250"> |
 
-## Quick start
+## Getting started: from the repo to your first video
 
-### Requirements
+This walks you through everything once, in order: install the app, start it, add the browser extension by hand (it is not published in any extension store), and turn your first German YouTube video into subtitles and a lesson. It takes about 15 minutes, most of it downloads.
 
-- **Node.js** 20.19+ or 22.12+ (developed on Node 24)
-- **Python 3.12** for the local voice service (any Python that can install `piper-tts` works; [uv](https://docs.astral.sh/uv/) makes it easy)
-- **Chrome, Edge or Brave** for the browser extension
+### What you need
 
-### 1. Install the app
+- **Node.js** 20.19+ or 22.12+ (developed on Node 24): <https://nodejs.org>
+- **Python 3.12** for the local voice service. Any Python that can install `piper-tts` works; [uv](https://docs.astral.sh/uv/) makes this easy.
+- **Chrome, Edge or Brave** (the extension is built for Chromium browsers).
+- A **ChatGPT** or **Claude** account, logged in in that same browser. No API key is needed. On a free plan, long videos may run into the chat's message limits; shorter videos are a good first try.
+- Git.
+
+The commands below are for **Linux and macOS**. Windows differences are noted where they matter.
+
+### Step 1: Get the code and install it
 
 ```bash
 git clone <your-repo-url> german-learner
@@ -68,9 +74,9 @@ cd german-learner
 npm install
 ```
 
-### 2. Set up the voice service (once)
+### Step 2: Set up the voice service (once)
 
-The app speaks German through a small local server (`tts-service/`) that runs the Piper voice model offline and, optionally, Microsoft Edge voices.
+The app speaks German through a small local server in `tts-service/`. It runs the **Piper** voice model offline on your computer and can also use Microsoft **Edge** voices online.
 
 ```bash
 # from the project root
@@ -81,28 +87,89 @@ mkdir -p tts-service/voices
 .venv/bin/python -m piper.download_voices de_DE-thorsten-high --data-dir tts-service/voices
 ```
 
-No `uv`? Use `python3.12 -m venv .venv && .venv/bin/pip install -r tts-service/requirements.txt` instead.
+- No `uv`? Use `python3.12 -m venv .venv && .venv/bin/pip install -r tts-service/requirements.txt`.
+- **Windows:** use `.venv\Scripts\python` instead of `.venv/bin/python`.
 
-### 3. Run it
+The voice file is about 110 MB and is downloaded only once.
 
-Two terminals:
+### Step 3: Start the app
 
-```bash
-npm run tts    # voice service on http://127.0.0.1:8787
-npm run dev    # app on http://localhost:5173
-```
-
-Open <http://localhost:5173>. If the voice service is not running, the app keeps working and shows an "Audio offline" notice.
-
-> Your progress is stored per browser **and per address**. `localhost:5173` and `localhost:5174` do not share data, so keep using the same one.
-
-### 4. Install the browser extension
+Open **two terminals** in the project folder and leave both running:
 
 ```bash
-npm run ext:build      # builds into extension/dist
+# terminal 1: the voice service, on http://127.0.0.1:8787
+npm run tts
 ```
 
-Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose `extension/dist`. Details are in [extension/README.md](extension/README.md).
+```bash
+# terminal 2: the app, on http://localhost:5173
+npm run dev
+```
+
+**Windows:** `npm run tts` uses a Linux/macOS path. Start the voice service with `cd tts-service` and then `..\.venv\Scripts\uvicorn app:app --port 8787 --host 127.0.0.1`.
+
+Open <http://localhost:5173> in your browser. You should see the **Home** page. If the voice service isn't running, the app still works and shows an "Audio offline" notice. Check **Settings → Voice → Test** to hear it.
+
+> Your lessons and progress are stored in the browser **for this exact address**. Always open the app at `http://localhost:5173`: a different port or browser starts empty.
+
+### Step 4: Build the browser extension and add it to your browser
+
+The extension isn't published in the Chrome Web Store, so you build it and load it yourself (once):
+
+```bash
+npm run ext:build      # creates extension/dist
+```
+
+1. Open the extensions page: `chrome://extensions` (Edge: `edge://extensions`, Brave: `brave://extensions`).
+2. Turn on **Developer mode** (top right; in Edge it's on the left).
+3. Click **Load unpacked** and choose the **`extension/dist`** folder inside the project. Choose `dist`, not `extension` itself.
+4. **German Learner – Video Subtitles and Lessons** appears in the list. Click the puzzle-piece icon in the toolbar and **pin** it so its button is always visible.
+
+The extension expects the app at `http://localhost:5173`. If you run it elsewhere, open the extension's **Settings** and change **App address**.
+
+> After you update the code (for example `git pull`), run `npm run ext:build` again and press the **reload** arrow on the extension's card in the extensions page.
+
+### Step 5: Log in to your AI chat
+
+In the same browser, open <https://chatgpt.com> or <https://claude.ai> and log in. The extension writes into that chat for you, using your account. ChatGPT uses a temporary chat, so nothing is added to your history.
+
+### Step 6: Your first video: learning subtitles
+
+1. Make sure the app (`npm run dev`) and the voice service (`npm run tts`) are still running.
+2. Open a **German** video on YouTube that has subtitles. Auto-generated ones are fine: if you see **…more → Show transcript** under the video, it works. Videos made for learners (Easy German, Deutsch mit Lari, comprehensible-input channels) are a good start.
+3. Click the extension's button in the toolbar. Choose **ChatGPT** or **Claude** (remembered for next time).
+4. Press **Create subtitles for this video**.
+
+<img src="docs/screenshots/extension-popup.png" alt="The extension popup on a YouTube video" width="300">
+
+What happens next, by itself:
+
+- A **job page** opens and shows four steps: *Read the transcript → Translate with ChatGPT → Build the subtitle file → Open in German Learner*.
+- It reads the transcript from the YouTube tab, then opens a **chat tab** and sends the transcript in parts. You'll see it type and send messages there. **Leave the tabs alone** until it's done: a 10-minute video takes a few minutes.
+- When it's finished, the app opens on the **Videos** page with your video in the player. Press play, hover any word for its meaning, and press `T` for the translation.
+
+The video is saved: it's in **Videos** from now on, and clicking the extension on the same video again offers **Open in app** (instant, no AI) or **Create again**.
+
+If something goes wrong, the job page says what happened, and **Details** at the bottom shows a log. If the transcript can't be read automatically, the job page asks you to paste it: open **…more → Show transcript** on YouTube, select all, copy, paste. More help is in [extension/README.md](extension/README.md#when-something-goes-wrong).
+
+### Step 7: The same video as a lesson
+
+To learn the video's words before (or after) watching it:
+
+1. On the same YouTube video, click the extension again and press **Create a lesson from this video**.
+2. The job page runs again: your AI chat writes a lesson from the transcript, following [docs/LESSON_FORMAT.md](docs/LESSON_FORMAT.md). The extension checks it and, if needed, asks the AI to fix it.
+3. The app opens the lesson under **Lessons**. Press **Start** to meet the first words.
+
+From here, see **How to use it** below.
+
+### Every day after that
+
+```bash
+npm run tts     # terminal 1
+npm run dev     # terminal 2
+```
+
+Then open <http://localhost:5173>, press **Review** on Home for what's due, and use the extension on any new video you want to learn from.
 
 ## How to use it
 
