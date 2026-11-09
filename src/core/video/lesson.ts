@@ -1,6 +1,6 @@
 import { importLessonText, slugify, type ImportResult } from '../importer';
 import { BASIC_WORDS } from '../vocab';
-import type { VideoFile, VideoSegment } from './schema';
+import type { VideoFile } from './schema';
 
 const ITEM_KINDS = new Set(['noun', 'verb', 'adjective', 'adverb']);
 const SKIP_KINDS = new Set(['article', 'pronoun', 'number']);
@@ -15,14 +15,13 @@ function splitArticle(base: string): { article?: 'der' | 'die' | 'das'; de: stri
 const cleanMeaning = (m: string) => m.replace(/^\([^)]*\)\s*/, '').trim() || m;
 
 /**
- * Turns a video's subtitles into a normal lesson: content words and phrases become items
- * (with the video line as their example), and the video's own sentences become
- * listen-and-choose and word-order exercises. Validated by the regular lesson importer.
+ * Turns a video's subtitles into a words-only lesson: its content words and phrases become
+ * items, each once. Spoken lines are not written sentences (fillers, broken-off phrases), so
+ * they are not used as examples or exercises. Validated by the regular lesson importer.
  */
-export function lessonFromVideo(video: VideoFile, { maxListen = 10, maxOrder = 8 } = {}): ImportResult {
+export function lessonFromVideo(video: VideoFile): ImportResult {
   const items: Record<string, unknown>[] = [];
   const seen = new Set<string>();
-  const example = (s: VideoSegment) => ({ de: s.text, ...(s.translation ? { en: s.translation } : {}) });
 
   for (const seg of video.segments) {
     for (const g of seg.glossary) {
@@ -39,41 +38,15 @@ export function lessonFromVideo(video: VideoFile, { maxListen = 10, maxOrder = 8
         de,
         en: cleanMeaning(g.meaning),
         ...(article ? { article } : {}),
-        example: example(seg),
       });
     }
     for (const p of seg.phrases) {
       const id = slugify(p.text);
       if (!id || seen.has(id)) continue;
       seen.add(id);
-      items.push({ id, kind: 'phrase', de: p.text, en: p.meaning, ...(p.note ? { notes: p.note } : {}), example: example(seg) });
+      items.push({ id, kind: 'phrase', de: p.text, en: p.meaning, ...(p.note ? { notes: p.note } : {}) });
     }
   }
-
-  const translated = video.segments.filter((s) => s.translation);
-  const spread = <T,>(list: T[], n: number) => (list.length <= n ? list : Array.from({ length: n }, (_, k) => list[Math.floor((k * list.length) / n)]!));
-  const exercises: Record<string, unknown>[] = [];
-
-  // Listen and choose: hear a line from the video, pick its meaning among other lines' meanings.
-  spread(translated, maxListen).forEach((s, k) => {
-    const others = translated.filter((o) => o.translation !== s.translation);
-    if (others.length < 2) return;
-    const pick = (offset: number) => others[(translated.indexOf(s) + offset) % others.length]!.translation!;
-    const wrong = [...new Set([pick(3), pick(7), pick(11)])].filter((w) => w !== s.translation).slice(0, 2);
-    const correct = k % (wrong.length + 1);
-    const options = [...wrong];
-    options.splice(correct, 0, s.translation!);
-    exercises.push({ type: 'listen_choose', audio: s.text, options, correct, explanation: s.translation });
-  });
-
-  // Word order: rebuild short lines from the video.
-  const short = translated.filter((s) => {
-    const n = s.text.split(/\s+/).length;
-    return n >= 3 && n <= 9;
-  });
-  spread(short, maxOrder).forEach((s) => {
-    exercises.push({ type: 'word_order', prompt_en: s.translation, tokens: s.text.split(/\s+/), answers: [s.text] });
-  });
 
   const lesson = {
     schema_version: 1,
@@ -82,7 +55,7 @@ export function lessonFromVideo(video: VideoFile, { maxListen = 10, maxOrder = 8
     tags: ['video', ...(video.level ? [video.level] : [])],
     source: `https://www.youtube.com/watch?v=${video.video.id}`,
     items,
-    exercises,
+    exercises: [],
   };
   return importLessonText(JSON.stringify(lesson), 'video-lesson.json');
 }

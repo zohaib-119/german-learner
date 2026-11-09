@@ -314,10 +314,10 @@ describe('lessonFromVideo', () => {
   it('creates a valid lesson from the video', () => {
     expect(lesson.ok).toBe(true);
   });
-  it('turns content words into items with dictionary form, article and the video line as example', () => {
+  it('turns content words into items with dictionary form and article', () => {
     if (!lesson.ok) return;
     const byId = Object.fromEntries(lesson.lesson.items.map((i) => [i.id, i]));
-    expect(byId.brot).toMatchObject({ de: 'Brot', article: 'das', kind: 'noun', en: 'bread', example: { de: 'Ich kaufe das Brot.', en: 'I buy the bread.' } });
+    expect(byId.brot).toMatchObject({ de: 'Brot', article: 'das', kind: 'noun', en: 'bread' });
     expect(byId.kaufen).toMatchObject({ de: 'kaufen', kind: 'verb', en: 'buy' });
     expect(byId.aufstehen).toMatchObject({ kind: 'verb', en: 'gets up' });
     expect(byId['ich']).toBeUndefined(); // pronoun / basic word
@@ -328,13 +328,12 @@ describe('lessonFromVideo', () => {
     if (!lesson.ok) return;
     expect(lesson.lesson.items.find((i) => i.kind === 'phrase')).toMatchObject({ de: 'Wie geht es dir?', en: 'How are you?', notes: 'literally: how goes it to you' });
   });
-  it('builds listening and word-order exercises from the video lines', () => {
+  it('is words only: spoken lines are not used as examples or exercises', () => {
     if (!lesson.ok) return;
-    const types = lesson.lesson.exercises.map((e) => e.type);
-    expect(types).toContain('listen_choose');
-    expect(types).toContain('word_order');
-    const lc = lesson.lesson.exercises.find((e) => e.type === 'listen_choose');
-    if (lc?.type === 'listen_choose') expect(lc.options[lc.correct]).toBe(r.video.segments.find((s) => s.text === lc.audio)!.translation);
+    // Before, every word carried its line as an example, so one line showed up once per word.
+    expect(lesson.lesson.items.every((i) => !i.example)).toBe(true);
+    expect(lesson.lesson.items.some((i) => i.kind === 'sentence')).toBe(false);
+    expect(lesson.lesson.exercises).toHaveLength(0);
     expect(lesson.lesson.id).toBe('video-kRq3WzSwUw0');
   });
 });
