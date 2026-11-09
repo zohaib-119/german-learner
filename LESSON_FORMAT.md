@@ -1,7 +1,11 @@
 # Lesson File Format (schema_version 1)
 
-This document defines the files you can import in the **Import** tab. It is written so you can paste it
+This document defines the lesson files you can import (**Lessons → Import**). It is written so you can paste it
 into an AI tool together with a transcript or word list and ask it to produce a lesson file.
+
+For YouTube videos the browser extension does this for you: **Create a lesson from this video** sends this whole
+document plus the video's transcript to ChatGPT or Claude, checks the answer with the app's importer, asks the AI
+to fix any problems, and opens the lesson in the app (id `yt-<video id>`, so doing it again updates the same lesson).
 
 Supported files: `.yaml` / `.yml` (recommended), `.json`, `.csv` (vocabulary only).
 One file = one lesson. Importing a file whose lesson `id` already exists **updates** that lesson.

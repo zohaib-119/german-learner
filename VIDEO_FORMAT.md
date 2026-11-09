@@ -1,11 +1,6 @@
 # Video Subtitle Format (schema_version 1)
 
-The **Videos** page plays a YouTube video with learning subtitles: the original line, its translation, and short meanings for hard words. You usually get these files from the browser extension (see `extension/README.md`), which creates them for you. This page describes the format, in case you want to make or edit one yourself.
-
-The Videos page accepts:
-
-- **`.json` / `.yaml`**: a finished file in the format below.
-- **`.srt` / `.vtt`**: plain subtitles. The app asks for the YouTube link and imports the lines without translations.
+The **Videos** page plays a YouTube video with learning subtitles: the original line, its translation, and short meanings for every word. These files are made by the browser extension (see `extension/README.md`), which hands them straight to the app; the Videos page has no file import. This page describes the format the extension produces and the app validates.
 
 ## Format
 
@@ -62,7 +57,7 @@ Each segment:
 
 By default the extension asks the AI to explain **every word of every line**, repeats included, so a complete beginner never has to look back. Choose "Only harder words" in the extension settings for less.
 
-**Create lesson** on the video page turns a video into a words-only lesson: its content words and phrases become word and phrase items, each once. Spoken lines are often not proper written sentences, so they are not used as examples or exercises; the lesson has no Sentences stage. **Lesson file** downloads the same lesson in the [lesson format](LESSON_FORMAT.md).
+Subtitles are not turned into lessons. To learn a video's words as a lesson, use the extension's separate **Create a lesson from this video**, which has the AI write a normal lesson in the [lesson format](LESSON_FORMAT.md).
 
 Words you have learned in your lessons are also highlighted with their meaning automatically (green underline), so the glossary only needs the words you haven't met yet.
 
@@ -92,4 +87,4 @@ Rules:
 - Valid JSON only.
 ```
 
-3. Then build the file. The easiest way is still the extension's job page: if reading the transcript fails, it lets you paste the transcript and does the rest. Otherwise, write the `segments` by hand using the times from the transcript.
+3. The extension's job page does the rest: if reading the transcript fails, it lets you paste the transcript and continues from there.

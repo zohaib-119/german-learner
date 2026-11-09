@@ -12,7 +12,7 @@ There are no accounts and no cloud services to depend on. Your lessons and progr
 
 Learning from comprehensible input (videos, podcasts) stalls when you do not know enough words to follow along. This app closes that gap:
 
-- **Learn from what you actually watch.** Turn the vocabulary and sentences of any video or text into a lesson file and import it.
+- **Learn from what you actually watch.** The browser extension turns a YouTube video into a lesson (written by your AI chat in the lesson format) or into learning subtitles to watch it with.
 - **Words before sentences.** You are assumed to know almost no vocabulary, so every content word is learned first. Sentences and exercises unlock only after most of a lesson's words are learned.
 - **Recognition first.** The main path is *reading* a word and recalling its meaning, and *hearing* a word and recalling its meaning. Typing (spelling) is a separate, optional practice.
 - **Listening is central.** Every word and sentence can be played at normal or slow speed, on repeat, with audio generated locally.
@@ -120,7 +120,7 @@ One rule makes the learning order work: **every content word used in a sentence 
 
 ### 2. Import it
 
-Open **Import**, drop one or more `.yaml` / `.json` / `.csv` files, check the preview (counts and warnings) and press **Import**. If the voice service is running, audio for every word, example and exercise answer is generated right away, so practice never waits. Importing a file with an existing lesson `id` updates that lesson and keeps your progress on unchanged items.
+On **Lessons**, press **Import**, drop one or more `.yaml` / `.json` / `.csv` files, check the preview (counts and warnings) and press **Import**. If the voice service is running, audio for every word, example and exercise answer is generated right away, so practice never waits. Importing a file with an existing lesson `id` updates that lesson and keeps your progress on unchanged items.
 
 ### 3. Learn the words
 
@@ -186,9 +186,9 @@ The subtitles are created by the browser extension in [`extension/`](extension/R
 2. It reads the video's transcript and asks your AI chat (ChatGPT or Claude, the account you're already logged in to) for translations and word meanings, a part at a time.
 3. It opens the result in the app. Timing and the original text always come from YouTube; the AI only adds translations and meanings.
 
-On the video page, **Create lesson** turns the video's words and phrases into a words-only lesson (each word once, spoken lines are not used as example sentences), so you can learn the words first and then watch. **Lesson file** downloads it in the lesson format.
+**Lessons from videos are a separate job.** In the extension, **Create a lesson from this video** sends the transcript together with [LESSON_FORMAT.md](LESSON_FORMAT.md) to your AI chat, which writes a normal lesson: the useful words and phrases, proper written example sentences and exercises. The extension checks it with the same importer as a lesson file (and asks the AI to fix any problems), then opens it under **Lessons**. Subtitles and lessons don't depend on each other; make either or both.
 
-The extension needs no API key. Setup and troubleshooting are in [extension/README.md](extension/README.md). The file format, for making or editing subtitles yourself, is in [VIDEO_FORMAT.md](VIDEO_FORMAT.md). You can also import a plain `.srt` or `.vtt` with a YouTube link.
+The extension needs no API key. Setup and troubleshooting are in [extension/README.md](extension/README.md). The subtitle file format is described in [VIDEO_FORMAT.md](VIDEO_FORMAT.md).
 
 | Key | In the player |
 | --- | --- |
