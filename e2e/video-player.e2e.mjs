@@ -1,8 +1,6 @@
 // End-to-end test of the Videos tab against a simulated YouTube player (controllable time and state).
 // Needs the app running: npm run dev -- --port 5174   (or set APP_URL)
 import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import { APP_URL, here, launch, reporter } from './lib.mjs';
 
 const b = await launch();
@@ -48,10 +46,16 @@ const approach = async (t, runMs = 700) => { await fake((x) => { window.__fake.t
 await p.goto(`${B}/videos`);
 await p.waitForSelector('.empty');
 ok('Videos tab with empty state', (await p.locator('.nav-link', { hasText: 'Videos' }).count()) === 1);
-await p.setInputFiles('input[type=file]', here('fixtures', 'video.json'));
+ok('no file import on the Videos page and no Import tab', (await p.locator('input[type=file]').count()) === 0 && (await p.locator('.nav-link', { hasText: 'Import' }).count()) === 0);
+/** Hands a video to the app exactly like the extension does. */
+const deliver = (type, payload, requestId = String(Math.random())) => p.evaluate(([type, payload, requestId]) => new Promise((resolve) => {
+  window.addEventListener('message', (e) => { if (e.data?.source === 'deutsch-app' && e.data.type === `${type}-result` && e.data.requestId === requestId) resolve(e.data); });
+  window.postMessage({ source: 'deutsch-extension', type, requestId, payload }, window.location.origin);
+}), [type, payload, requestId]);
+await deliver('video-import', JSON.parse(fs.readFileSync(here('fixtures', 'video.json'), 'utf8')));
 await p.waitForSelector('.vid-layout');
 await sleep(300);
-ok('JSON import opens the player', p.url().includes('/videos/yt-kRq3WzSwUw0'));
+ok('a delivered video opens the player', p.url().includes('/videos/yt-kRq3WzSwUw0'));
 ok('starts on the first line', /Hallo/.test(await line()));
 
 await play(); await sleep(150);
@@ -186,15 +190,14 @@ const replies = await p.evaluate(() => new Promise((resolve) => {
 }));
 ok('foreign messages ignored, invalid payload rejected', replies.length === 1 && replies[0].requestId === 'bad' && replies[0].ok === false);
 
-// plain .srt
-await p.goto(`${B}/videos`); await p.waitForSelector('.video-card');
-const srtPath = path.join(os.tmpdir(), 'deutsch-e2e-plain.srt');
-fs.writeFileSync(srtPath, '1\n00:00:01,000 --> 00:00:03,000\nGuten Morgen!\n\n2\n00:00:03,500 --> 00:00:06,000\nWie geht es dir?\n');
-await p.setInputFiles('input[type=file]', srtPath);
-await p.fill('input[placeholder="YouTube link"]', 'https://youtu.be/g_h1DtGIAfQ');
-await p.getByRole('button', { name: 'Import' }).click();
-await p.waitForSelector('.vid-layout');
-ok('plain .srt import asks for the link and works', p.url().includes('yt-g_h1DtGIAfQ') && (await p.locator('.vid-row').count()) === 2);
+// lesson hand-off (the extension's separate "Create lesson" job)
+const lessonText = JSON.stringify({ id: 'yt-g_h1DtGIAfQ', title: 'Lesson from a video', tags: ['video'], items: [{ kind: 'noun', de: 'Morgen', article: 'der', en: 'morning' }] });
+const lack = await deliver('lesson-import', lessonText);
+ok('bridge saves a delivered lesson', lack.ok === true && lack.id === 'yt-g_h1DtGIAfQ');
+await p.waitForSelector('.stages');
+ok('bridge opens the new lesson', p.url().includes('/lessons/yt-g_h1DtGIAfQ') && /Lesson from a video/.test(await p.locator('h1').innerText()));
+const lbad = await deliver('lesson-import', '{"title": "no id"}');
+ok('invalid lesson rejected with the importer errors', lbad.ok === false && lbad.errors.length > 0, JSON.stringify(lbad.errors));
 
 // delete
 await p.goto(`${B}/videos`); await p.waitForSelector('.video-card');

@@ -50,11 +50,30 @@ const chatPage = `<!doctype html><html><head><title>Mock chat</title>
     box.innerText = ''; sync();
     const user = document.createElement('div'); user.dataset.messageAuthorRole = 'user'; user.textContent = prompt; thread.appendChild(user);
     const stop = document.createElement('button'); stop.dataset.testid = 'stop-button'; stop.textContent = 'Stop'; document.body.appendChild(stop);
+    const isLesson = prompt.includes('=== FORMAT GUIDE') || prompt.includes('The app checked your lesson');
     const lines = [...prompt.matchAll(/^(\\d+) \\| (.+)$/gm)].map((m) => ({ i: Number(m[1]), text: m[2] }));
     // The first answer leaves out line 2 so the extension has to ask again.
     const answered = firstAnswer ? lines.filter((l) => l.i !== 2) : lines;
-    firstAnswer = false;
-    const json = JSON.stringify(answered.map((l) => ({
+    if (!isLesson) firstAnswer = false;
+    window.__lessonPrompts = window.__lessonPrompts || 0;
+    // Lesson job: the first lesson has an invalid exercise (no ___ gap) so the extension asks for a fix.
+    const lessonJson = () => JSON.stringify({
+      id: 'ignored', title: 'Beim Bäcker (Lektion)', tags: ['a1', 'food'],
+      items: [
+        { kind: 'noun', de: 'Bäcker', article: 'der', plural: 'Bäcker', en: 'baker', example: { de: 'Der Bäcker ist nett.', en: 'The baker is nice.' } },
+        { kind: 'adjective', de: 'nett', en: 'nice', example: { de: 'Der Bäcker ist nett.', en: 'The baker is nice.' } },
+        { kind: 'noun', de: 'Brötchen', article: 'das', plural: 'Brötchen', en: 'bread roll', example: { de: 'Ich kaufe ein Brötchen.', en: 'I buy a bread roll.' } },
+        { kind: 'verb', de: 'kaufen', en: 'to buy', example: { de: 'Ich kaufe ein Brötchen.', en: 'I buy a bread roll.' } },
+        { kind: 'phrase', de: 'bis bald', en: 'see you soon', notes: 'literally: until soon' },
+      ],
+      exercises: [
+        { type: 'listen_choose', audio: 'Ich kaufe ein Brötchen.', options: ['I buy a bread roll.', 'The baker is nice.'], correct: 0, explanation: 'kaufen = to buy' },
+        window.__lessonPrompts++ === 0
+          ? { type: 'fill_blank', prompt: 'Der Bäcker ist nett.', answer: 'nett' }
+          : { type: 'fill_blank', prompt: 'Der Bäcker ist ___.', answer: 'nett', explanation: 'nett = nice' },
+      ],
+    });
+    const json = isLesson ? lessonJson() : JSON.stringify(answered.map((l) => ({
       i: l.i, t: 'EN: ' + l.text,
       g: l.text.replace(/[.,!?]/g, '').split(' ').map((w) => ({ w, b: w.toLowerCase(), k: 'other', m: 'meaning of ' + w })),
       p: [{ p: l.text.split(' ').slice(0, 2).join(' '), m: 'phrase meaning', n: 'literally: test' }],

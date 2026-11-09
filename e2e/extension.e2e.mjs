@@ -110,6 +110,36 @@ try {
   ok('"Create again" goes through the AI again', /translated in/.test(await redo.job.locator('[data-step="ai"] .detail').innerText()));
   await redo.yt.close();
 
+  // ---- 1d. lesson from the video: separate job, normal lesson format --------------------------------
+  const pop2 = await ctx.newPage();
+  const ytForPopup = await ctx.newPage();
+  await ytForPopup.goto(`${MOCK}/watch?v=kRq3WzSwUw0`);
+  const popupTab = await tabIdFor(`${MOCK}/watch*`);
+  await pop2.goto(ext(`popup.html?tab=${popupTab}`));
+  ok('popup offers a separate lesson button', /lesson from this video/i.test(await pop2.locator('#lesson').innerText()));
+  await pop2.close().catch(() => {});
+  await ytForPopup.close();
+  for (const pg of ctx.pages()) if (pg.url().startsWith(APP_URL)) await pg.close();
+  const les = await runJob('kRq3WzSwUw0', '&kind=lesson');
+  await les.job.waitForSelector('[data-step="app"][data-state="done"], [data-state="error"]', { timeout: 90_000 });
+  const lesStates = await les.job.$$eval('.steps li', (lis) => lis.map((li) => `${li.dataset.step}:${li.dataset.state}:${li.querySelector('.detail').textContent}`));
+  lesStates.forEach((s) => console.log('      ', s));
+  ok('lesson job: all steps done', lesStates.every((s) => s.split(':')[1] === 'done'));
+  ok('lesson job is labelled as a lesson', /Write the lesson/.test(await les.job.locator('[data-step="ai"] b').innerText()));
+  const lesLog = await les.job.locator('#log').textContent();
+  ok('invalid lesson was sent back to the AI and fixed', /lesson has problems/.test(lesLog) && /fixed lesson: 5 words, 2 exercises/.test(lesLog));
+  const lesApp = ctx.pages().find((pg) => pg.url().includes('/#/lessons/yt-kRq3WzSwUw0'));
+  ok('app opened on the new lesson', !!lesApp, ctx.pages().map((p) => p.url()).join(' | '));
+  if (lesApp) {
+    await lesApp.waitForSelector('.stages');
+    ok('lesson has the AI title and its words', /Beim Bäcker \(Lektion\)/.test(await lesApp.locator('h1').innerText()) && (await lesApp.locator('.row-item').count()) === 5);
+    ok('lesson has a Sentences stage from the written examples', (await lesApp.locator('.stage-card').count()) === 2);
+  }
+  const [ldl] = await Promise.all([les.job.waitForEvent('download'), les.job.click('#dl-lesson')]);
+  const lfile = JSON.parse(fs.readFileSync(await ldl.path(), 'utf8'));
+  ok('downloadable lesson file uses the video id and link', lfile.id === 'yt-kRq3WzSwUw0' && /watch\?v=kRq3WzSwUw0/.test(lfile.source) && lfile.tags[0] === 'video');
+  await les.yt.close();
+
   // ---- 2. no transcript on the page -> paste fallback ---------------------------------------------
   const run2 = await runJob('abcdefghijk');
   await run2.job.waitForSelector('#paste:not([hidden])', { timeout: 30_000 });
