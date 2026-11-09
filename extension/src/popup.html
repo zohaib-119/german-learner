@@ -22,7 +22,7 @@
   </head>
   <body>
     <main>
-      <h1>Learning subtitles</h1>
+      <h1>Deutsch Trainer</h1>
       <p id="hint">Open a YouTube video, then click here.</p>
       <div class="seg" role="radiogroup" aria-label="AI chat" id="provider">
         <button role="radio" data-provider="chatgpt" aria-checked="false">ChatGPT</button>
@@ -30,6 +30,7 @@
       </div>
       <button id="open" hidden>Open in app</button>
       <button id="go" disabled>Create subtitles for this video</button>
+      <button id="lesson" class="secondary" disabled title="A word lesson written by the AI from this video's transcript">Create a lesson from this video</button>
       <a id="settings">Settings</a>
     </main>
     <script src="popup.js"></script>

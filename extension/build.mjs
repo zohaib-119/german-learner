@@ -32,6 +32,7 @@ const options = {
   target: 'chrome120',
   charset: 'utf8',
   logLevel: 'info',
+  loader: { '.md': 'text' }, // LESSON_FORMAT.md is bundled into the lesson prompt
 };
 if (watch) {
   const ctx = await esbuild.context(options);

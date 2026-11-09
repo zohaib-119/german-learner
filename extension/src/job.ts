@@ -1,11 +1,14 @@
-// The job page: runs the whole pipeline for one YouTube tab and shows its progress.
-// YouTube tab -> transcript -> AI chat (chunk by chunk) -> validated subtitle file -> Deutsch Trainer.
+// The job page: runs one pipeline for a YouTube tab and shows its progress. Two independent jobs:
+//   subtitles (default): transcript -> AI chat (chunk by chunk) -> validated subtitle file -> Videos
+//   lesson (?kind=lesson): transcript + LESSON_FORMAT.md -> AI chat -> validated lesson file -> Lessons
+import lessonGuide from '../../LESSON_FORMAT.md';
+import { buildLessonFixPrompt, buildLessonPrompt, parseLessonReply, type LessonReply } from '../../src/core/lesson-ai';
 import { buildVideoFile } from '../../src/core/video/build';
 import { mergeCues, type Line } from '../../src/core/video/lines';
 import { buildPrompt, buildRetryPrompt, chunkLines, missingLines, parseAiReply, type AiItem } from '../../src/core/video/prompt';
 import { normalizeVideo, type VideoFile } from '../../src/core/video/schema';
 import { parseTranscriptText, toSrt, videoIdFromUrl, type Cue } from '../../src/core/video/subtitles';
-import type { AiAskResult, AppDeliverResult } from './messages';
+import type { AiAskResult, AppDeliverResult, DeliverKind } from './messages';
 import { getEntry, putEntry } from './library';
 import { PROVIDERS, chatUrlFor, loadSettings, saveSettings, type ExtSettings } from './settings';
 import { scrapeYouTube, type ScrapedVideo } from './youtube-scrape';
@@ -125,27 +128,32 @@ async function readTranscript(tabId: number, s: ExtSettings): Promise<{ meta: Sc
   return { meta: scraped.meta, cues };
 }
 
+let jobLabel = 'Subtitles';
 function showVideo(meta: ScrapedVideo['meta']) {
   $('#title').textContent = meta.title;
   $('#subtitle').textContent = [meta.channel, meta.duration ? `${Math.round(meta.duration / 60)} min` : ''].filter(Boolean).join(' · ');
   const img = $<HTMLImageElement>('#thumb');
   img.src = `https://i.ytimg.com/vi/${meta.videoId}/mqdefault.jpg`;
   img.hidden = false;
-  document.title = `Subtitles · ${meta.title}`;
+  document.title = `${jobLabel} · ${meta.title}`;
 }
 
 // ---- step 2: AI --------------------------------------------------------------------------------------
 
-async function translate(lines: Line[], s: ExtSettings, title: string): Promise<{ replies: AiItem[]; aiTabId: number }> {
-  const provider = PROVIDERS[s.provider].name;
-  const chunks = chunkLines(lines, { maxLines: s.chunkSize });
-  const options = { level: s.level, glossMode: s.glossMode, sourceLanguage: s.sourceLanguage, targetLanguage: s.targetLanguage, title };
-  step('ai', 'active', `Opening ${provider}…`);
+async function openAiTab(s: ExtSettings): Promise<number> {
+  step('ai', 'active', `Opening ${PROVIDERS[s.provider].name}…`);
   const tab = await chrome.tabs.create({ url: chatUrlFor(s), active: true });
   const aiTabId = tab.id!;
   await waitForTabLoaded(aiTabId);
   const ping = await sendToTab<{ ok: boolean; site: string }>(aiTabId, { type: 'ai:ping' });
   log(`connected to ${ping.site} (${chatUrlFor(s)})`);
+  return aiTabId;
+}
+
+async function translate(lines: Line[], s: ExtSettings, title: string): Promise<{ replies: AiItem[]; aiTabId: number }> {
+  const chunks = chunkLines(lines, { maxLines: s.chunkSize });
+  const options = { level: s.level, glossMode: s.glossMode, sourceLanguage: s.sourceLanguage, targetLanguage: s.targetLanguage, title };
+  const aiTabId = await openAiTab(s);
 
   const replies: AiItem[] = [];
   for (const chunk of chunks) {
@@ -175,6 +183,43 @@ async function translate(lines: Line[], s: ExtSettings, title: string): Promise<
   return { replies, aiTabId };
 }
 
+/** Lesson job: one prompt with the whole transcript and the format guide, plus one round of fixes. */
+async function writeLesson(lines: Line[], s: ExtSettings, meta: ScrapedVideo['meta']): Promise<{ reply: LessonReply & { ok: true }; aiTabId: number }> {
+  const provider = PROVIDERS[s.provider].name;
+  const aiTabId = await openAiTab(s);
+  const ask = async (prompt: string) => {
+    const res = await sendToTab<AiAskResult>(aiTabId, { type: 'ai:ask', prompt, timeoutMs: 10 * 60_000 }, 3);
+    if (!res.ok) throw new Error(res.error);
+    return parseLessonReply(res.text, { videoId: meta.videoId, title: meta.title });
+  };
+  const prompt = buildLessonPrompt({
+    guide: lessonGuide,
+    transcript: lines.map((l) => l.text).join('\n'),
+    videoId: meta.videoId,
+    title: meta.title,
+    channel: meta.channel,
+    level: s.level,
+    sourceLanguage: s.sourceLanguage,
+    targetLanguage: s.targetLanguage,
+  });
+  step('ai', 'active', `${provider} is writing the lesson from ${lines.length} transcript lines…`);
+  progress(0, 2);
+  let reply = await ask(prompt);
+  const problems = reply.ok ? (reply.missingWords ?? []) : reply.errors;
+  log(reply.ok ? `lesson received: ${reply.lesson.items.length} words, ${reply.lesson.exercises.length} exercises` : `lesson has problems: ${problems.join(' | ')}`);
+  if (problems.length) {
+    step('ai', 'active', `Asking ${provider} to fix ${reply.ok ? 'missing words' : `${problems.length} problem(s)`}…`);
+    progress(1, 2);
+    const fixed = await ask(buildLessonFixPrompt(problems)).catch((e: unknown) => ({ ok: false as const, errors: [errorText(e)] }));
+    log(fixed.ok ? `fixed lesson: ${fixed.lesson.items.length} words, ${fixed.lesson.exercises.length} exercises` : `fix failed: ${fixed.errors.join(' | ')}`);
+    if (fixed.ok) reply = fixed;
+  }
+  if (!reply.ok) throw new Error(`The lesson from ${provider} is not valid:\n${reply.errors.join('\n')}`);
+  progress(1, 1);
+  step('ai', 'done', `${reply.lesson.items.length} words and phrases · ${reply.lesson.exercises.length} exercises`);
+  return { reply, aiTabId };
+}
+
 // ---- step 3 + 4 ------------------------------------------------------------------------------------
 
 function download(name: string, text: string, type = 'text/plain') {
@@ -199,14 +244,32 @@ function offerFiles(video: VideoFile, s: ExtSettings) {
   }
 }
 
-async function sendToApp(video: VideoFile, s: ExtSettings) {
+async function sendToApp(payload: unknown, kind: DeliverKind, s: ExtSettings) {
   step('app', 'active', `Opening ${s.appUrl}…`);
-  const tab = await chrome.tabs.create({ url: `${s.appUrl}/#/videos`, active: true });
+  const tab = await chrome.tabs.create({ url: `${s.appUrl}/#/${kind === 'lesson' ? 'lessons' : 'videos'}`, active: true });
   await waitForTabLoaded(tab.id!);
-  const res = await sendToTab<AppDeliverResult>(tab.id!, { type: 'app:deliver', payload: video });
+  const res = await sendToTab<AppDeliverResult>(tab.id!, { type: 'app:deliver', payload, kind });
   if (!res.ok) throw new Error(res.error);
   step('app', 'done', `Saved as ${res.id}${res.warnings?.length ? ` · ${res.warnings.join('; ')}` : ''}`);
   await chrome.tabs.update(tab.id!, { active: true });
+}
+
+function setLessonLabels(provider: string) {
+  const label = (st: Step, text: string) => (($(`[data-step="${st}"] b`) as HTMLElement).textContent = text);
+  label('ai', `Write the lesson with ${provider}`);
+  label('build', 'Check the lesson');
+  jobLabel = 'Lesson';
+  document.title = 'Lesson from video';
+  $('#heading-kind').textContent = 'Lesson from this video';
+}
+
+function offerLessonFile(id: string, text: string, s: ExtSettings) {
+  $('#result').hidden = false;
+  for (const b of ['#dl-json', '#dl-srt', '#dl-srt-tr']) $(b).hidden = true;
+  $('#dl-lesson').hidden = false;
+  $('#dl-lesson').onclick = () => download(`${id}.json`, text, 'application/json');
+  $('#result-note').textContent = 'If the app did not open, import this file on its Lessons page.';
+  if (s.downloadFiles) download(`${id}.json`, text, 'application/json');
 }
 
 // ---- main -------------------------------------------------------------------------------------------
@@ -221,14 +284,15 @@ async function main() {
     return;
   }
   const s = await loadSettings();
+  const kind: DeliverKind = params.get('kind') === 'lesson' ? 'lesson' : 'video';
   $('#provider-name').textContent = PROVIDERS[s.provider].name;
   let current: Step = 'transcript';
   let aiTabId: number | undefined;
 
-  const deliver = async (video: VideoFile) => {
+  const deliver = async (payload: unknown) => {
     current = 'app';
     const deliverOnce = () =>
-      sendToApp(video, s).catch((e) => {
+      sendToApp(payload, kind, s).catch((e) => {
         step('app', 'error', `${errorText(e)}\nIs the app running at ${s.appUrl}? You can change the address in Settings.`);
         $('#send-again').hidden = false;
       });
@@ -238,6 +302,28 @@ async function main() {
     };
     await deliverOnce();
   };
+
+  if (kind === 'lesson') {
+    setLessonLabels(PROVIDERS[s.provider].name);
+    try {
+      const { meta, cues } = await readTranscript(tabId, s);
+      const lines = mergeCues(cues);
+      log(`merged into ${lines.length} transcript lines`);
+      current = 'ai';
+      const w = await writeLesson(lines, s, meta);
+      aiTabId = w.aiTabId;
+      current = 'build';
+      const { lesson, warnings } = w.reply;
+      step('build', 'done', `"${lesson.title}" · id ${lesson.id}${warnings.length ? ` · ${warnings.join('; ')}` : ''}`);
+      offerLessonFile(lesson.id, w.reply.text!, s);
+      if (s.closeAiTab && aiTabId !== undefined) await chrome.tabs.remove(aiTabId).catch(() => {});
+      await deliver(w.reply.text);
+    } catch (e) {
+      step(current, 'error', errorText(e));
+      log(`stopped: ${errorText(e)}`);
+    }
+    return;
+  }
 
   try {
     // Already made for this video? Then skip straight to the app (unless "Create again" was chosen).

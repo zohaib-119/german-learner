@@ -1,11 +1,12 @@
-// Content script for the Deutsch Trainer app (localhost). Forwards finished subtitles to the page,
-// which validates and stores them (see src/ui/videos/bridge.ts in the app).
-import type { AppDeliver, AppDeliverResult } from './messages';
+// Content script for the Deutsch Trainer app (localhost). Forwards finished subtitles or a lesson to
+// the page, which validates and stores them (see src/ui/videos/bridge.ts in the app).
+import type { AppDeliver, AppDeliverResult, DeliverKind } from './messages';
 
 const EXTENSION_SOURCE = 'deutsch-extension';
 const APP_SOURCE = 'deutsch-app';
 
-function deliver(payload: unknown): Promise<AppDeliverResult> {
+function deliver(payload: unknown, kind: DeliverKind): Promise<AppDeliverResult> {
+  const type = kind === 'lesson' ? 'lesson-import' : 'video-import';
   const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
@@ -14,13 +15,13 @@ function deliver(payload: unknown): Promise<AppDeliverResult> {
     }, 15_000);
     function onMessage(e: MessageEvent) {
       const d = e.data as { source?: string; type?: string; requestId?: string; ok?: boolean; id?: string; errors?: string[]; warnings?: string[] } | null;
-      if (e.source !== window || d?.source !== APP_SOURCE || d.type !== 'video-import-result' || d.requestId !== requestId) return;
+      if (e.source !== window || d?.source !== APP_SOURCE || d.type !== `${type}-result` || d.requestId !== requestId) return;
       clearTimeout(timer);
       window.removeEventListener('message', onMessage);
-      resolve(d.ok && d.id ? { ok: true, id: d.id, warnings: d.warnings ?? [] } : { ok: false, error: (d.errors ?? ['The app rejected the subtitles.']).join('\n') });
+      resolve(d.ok && d.id ? { ok: true, id: d.id, warnings: d.warnings ?? [] } : { ok: false, error: (d.errors ?? [`The app rejected the ${kind === 'lesson' ? 'lesson' : 'subtitles'}.`]).join('\n') });
     }
     window.addEventListener('message', onMessage);
-    window.postMessage({ source: EXTENSION_SOURCE, type: 'video-import', requestId, payload }, window.location.origin);
+    window.postMessage({ source: EXTENSION_SOURCE, type, requestId, payload }, window.location.origin);
   });
 }
 
@@ -30,7 +31,7 @@ chrome.runtime.onMessage.addListener((msg: AppDeliver | { type: 'app:ping' }, _s
     return false;
   }
   if (msg?.type === 'app:deliver') {
-    void deliver(msg.payload).then(sendResponse);
+    void deliver(msg.payload, msg.kind ?? 'video').then(sendResponse);
     return true;
   }
   return false;

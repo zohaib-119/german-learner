@@ -50,6 +50,9 @@ async function init() {
   if (videoId && tab?.id !== undefined) {
     describe();
     go.disabled = false;
+    const lesson = $<HTMLButtonElement>('lesson');
+    lesson.disabled = false;
+    lesson.onclick = () => openJob(`tab=${tab.id}&kind=lesson`);
     if (entry) {
       open.hidden = false;
       open.onclick = () => openJob(`tab=${tab.id}&video=${videoId}&mode=open`);

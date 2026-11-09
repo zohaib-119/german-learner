@@ -11,5 +11,5 @@
     "noEmit": true,
     "types": ["chrome"]
   },
-  "include": ["src", "../src/core/video"]
+  "include": ["src", "../src/core/video", "../src/core/lesson-ai.ts"]
 }

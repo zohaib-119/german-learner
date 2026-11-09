@@ -1,8 +1,8 @@
 # Deutsch Trainer – Video Subtitles (browser extension)
 
-Turns any YouTube video into learning subtitles in a few clicks, using the AI chat you are already logged in to (ChatGPT or Claude). No API keys.
+Turns any YouTube video into **learning subtitles** or a **lesson** in a few clicks, using the AI chat you are already logged in to (ChatGPT or Claude). No API keys. The two are separate jobs; make either or both.
 
-**What happens when you click it on a YouTube video:**
+**Create subtitles for this video:**
 
 1. **Transcript.** It opens YouTube's own *Show transcript* panel in your tab and reads the timed lines.
 2. **AI.** It opens a new chat (ChatGPT or Claude), pastes the lines in parts with instructions, and waits for each answer. The answer contains a translation of every line and short meanings for the words a learner at your level may not know. If a line is missing from an answer, it asks again for just that line.
@@ -10,6 +10,13 @@ Turns any YouTube video into learning subtitles in a few clicks, using the AI ch
 4. **App.** It opens Deutsch Trainer's **Videos** page and hands the subtitles over. The video starts in the player with hover-for-meaning subtitles.
 
 You can watch the progress on the extension's job page, which also lets you download the result as `.json` or `.srt`.
+
+**Create a lesson from this video:**
+
+1. **Transcript**, as above.
+2. **AI.** One message with the whole transcript and the app's lesson format guide (`LESSON_FORMAT.md`, built into the extension). The AI picks the useful words and phrases, writes proper written example sentences (spoken lines are often not good examples) and exercises, at your level.
+3. **Check.** The answer is validated with the app's own lesson importer. If it has errors, or uses words in sentences that are not items, the AI is asked once to fix them.
+4. **App.** The lesson opens under **Lessons**, like an imported lesson file. Its id is `yt-<video id>`, so making it again updates the same lesson and keeps your progress on unchanged words. The job page also offers the lesson as a `.json` file.
 
 ## Install
 
@@ -28,7 +35,7 @@ After changing the code, run `npm run ext:build` again (or keep `npm run ext:wat
 
 1. Start the app (`npm run dev`) and make sure you are logged in to ChatGPT or Claude in the same browser.
 2. Open a YouTube video.
-3. Click the extension icon, pick **ChatGPT** or **Claude** (your choice is remembered), and press **Create subtitles for this video**. You can also right-click the page and choose **Create learning subtitles for this video**.
+3. Click the extension icon, pick **ChatGPT** or **Claude** (your choice is remembered), and press **Create subtitles for this video** or **Create a lesson from this video**. Both are also in the right-click menu on the page.
 4. Leave the tabs alone until the job page says it is done. A 10-minute video takes a few AI messages, which usually takes a few minutes.
 
 ### Videos you already did
@@ -62,7 +69,8 @@ Open them from the popup (**Settings**) or at the bottom of the job page.
 | "Could not read the transcript… Paste it below" | On YouTube open **…more → Show transcript**, select all the lines, copy and paste them into the box on the job page. `.srt`/`.vtt` text works too. Videos without any captions can't be used. |
 | "did not start answering. Are you logged in?" | Log in to the AI site in this browser and start again. |
 | "did not accept the text in its chat box" or the job hangs on the AI step | The AI site probably changed its page. The selectors are at the top of `src/ai-content.ts`. |
-| "Is the app running at …?" | Start the app, check the address in Settings, then press **Send to app again**. You can also download the `.json` and drop it on the app's Videos page. |
+| "Is the app running at …?" | Start the app, check the address in Settings, then press **Send to app again**. For a lesson you can also download the `.json` and import it on the app's Lessons page. |
+| "The lesson from … is not valid" | The AI's lesson still had errors after one fix. Run it again, or try the other AI. |
 | Some lines have no translation | The AI skipped them twice. They still play with the German text; you can re-run the video later. |
 
 **Details** at the bottom of the job page shows a log of every step, which helps when reporting a problem.
@@ -80,7 +88,7 @@ extension/
   manifest.json        Manifest V3: permissions, content scripts
   build.mjs            esbuild bundler -> dist/
   src/
-    popup.*            toolbar popup: starts a job for the current YouTube tab
+    popup.*            toolbar popup: starts a subtitle or lesson job for the current YouTube tab
     background.ts      right-click menu entry on YouTube pages
     job.*              the job page: runs the pipeline and shows progress (no service-worker time limits)
     youtube-scrape.ts  injected into the YouTube tab; reads the transcript panel, falls back to the caption track
@@ -90,7 +98,7 @@ extension/
     settings.ts        stored settings
 ```
 
-The prompt, the reply parser, line merging and the file format live in the app's `src/core/video/`, which the extension imports. The two can't drift apart, and that logic is unit-tested with the app (`npm test`).
+The prompts, the reply parsers, line merging and the file formats live in the app's `src/core/video/` and `src/core/lesson-ai.ts`, which the extension imports (along with the app's lesson importer). The two can't drift apart, and that logic is unit-tested with the app (`npm test`).
 
 The app accepts results only from same-window messages with the expected envelope, and validates them with the same schema as a manual import (`src/ui/videos/bridge.ts`).
 
