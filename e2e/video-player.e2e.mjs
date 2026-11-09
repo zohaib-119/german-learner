@@ -137,30 +137,17 @@ ok('clicking a word pauses and shows its meaning', (await fake(() => window.__fa
 await p.getByRole('button', { name: 'Close' }).first().click();
 ok('word panel closes', (await p.locator('.vid-picked').count()) === 0);
 
-// phrases + dictionary form + lesson
+// phrases + dictionary form
 await fake(() => { window.__fake.t = 9; }); await sleep(300);
 ok('phrase with its explanation shown under the line', /up early · literally: early up/.test(await p.locator('.vid-phrases').innerText()));
 const tips = await p.locator('.vid-bar .gloss-tip').allTextContents();
 ok('tooltip shows the dictionary form too', tips.some((t) => t === 'the baker · der Bäcker'), JSON.stringify(tips));
-const [ly] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: /Lesson file/ }).click()]);
-const yamlText = fs.readFileSync(await ly.path(), 'utf8');
-ok('lesson file downloads in the lesson format, words only', /^schema_version: 1/m.test(yamlText) && /items:/.test(yamlText) && !/type: /.test(yamlText) && !/example:/.test(yamlText));
+ok('no lesson buttons on the video page', (await p.getByRole('button', { name: /Create lesson|Lesson file/ }).count()) === 0);
 
 // SRT download
 const [dl] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: /^SRT/ }).click()]);
 ok('SRT download', /00:00:08,000 --> 00:00:16,000/.test(fs.readFileSync(await dl.path(), 'utf8')));
 
-// create a lesson from the video, then come back
-await p.getByRole('button', { name: /Create lesson/ }).click();
-await p.waitForSelector('.stages');
-ok('Create lesson opens a lesson built from the video', p.url().includes('/lessons/video-kRq3WzSwUw0') && /Video · Test video/.test(await p.locator('h1').innerText()));
-const words = await p.locator('.row-item').allInnerTexts();
-ok('lesson has the video words with articles', words.some((w) => /der\s+Bäcker/.test(w)) && words.some((w) => /aufstehen/.test(w)), `${words.length} words`);
-ok('video lesson is words only, without a Sentences stage or tabs',
-  (await p.locator('.stage-card').count()) === 1 && (await p.getByRole('tab').count()) === 0);
-const titles = await p.locator('.row-title').allInnerTexts();
-ok('every word is listed once', new Set(titles).size === titles.length, `${titles.length} items`);
-await p.goto(`${B}/videos/yt-kRq3WzSwUw0`); await p.waitForSelector('.vid-layout'); await sleep(400);
 
 // resume position
 await play(); await fake(() => { window.__fake.t = 26; }); await sleep(5600);

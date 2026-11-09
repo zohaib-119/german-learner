@@ -7,7 +7,6 @@ import {
   buildPrompt,
   buildRetryPrompt,
   buildVideoFile,
-  lessonFromVideo,
   chunkLines,
   formatTimestamp,
   mergeCues,
@@ -292,48 +291,5 @@ describe('prompt modes', () => {
     const [item] = parseAiReply('[{"i":1,"t":"I buy bread.","g":[{"w":"kaufe","b":"kaufen","k":"verb","m":"(I) buy"}],"p":[{"p":"Lust haben","m":"to feel like","n":"literally: to have desire"}]}]');
     expect(item!.g[0]).toEqual({ w: 'kaufe', m: '(I) buy', b: 'kaufen', k: 'verb' });
     expect(item!.p[0]).toEqual({ p: 'Lust haben', m: 'to feel like', n: 'literally: to have desire' });
-  });
-});
-
-describe('lessonFromVideo', () => {
-  const file = buildVideoFile({ videoId: 'kRq3WzSwUw0', title: 'Beim Bäcker', level: 'A0' }, [
-    { start: 0, end: 3, text: 'Ich kaufe das Brot.' },
-    { start: 3, end: 6, text: 'Der Bäcker steht früh auf.' },
-    { start: 6, end: 9, text: 'Wie geht es dir?' },
-    { start: 9, end: 12, text: 'Ich kaufe noch ein Brot.' },
-  ], [
-    { i: 1, t: 'I buy the bread.', g: [{ w: 'Ich', m: 'I', k: 'pronoun' }, { w: 'kaufe', b: 'kaufen', k: 'verb', m: '(I) buy' }, { w: 'das', m: 'the', k: 'article' }, { w: 'Brot', b: 'das Brot', k: 'noun', m: 'bread' }], p: [] },
-    { i: 2, t: 'The baker gets up early.', g: [{ w: 'Bäcker', b: 'der Bäcker', k: 'noun', m: 'baker' }, { w: 'steht auf', b: 'aufstehen', k: 'verb', m: 'gets up' }, { w: 'früh', b: 'früh', k: 'adverb', m: 'early' }], p: [] },
-    { i: 3, t: 'How are you?', g: [{ w: 'Wie', m: 'how', k: 'adverb' }], p: [{ p: 'Wie geht es dir?', m: 'How are you?', n: 'literally: how goes it to you' }] },
-    { i: 4, t: 'I buy another bread.', g: [{ w: 'kaufe', b: 'kaufen', k: 'verb', m: '(I) buy' }, { w: 'Brot', b: 'das Brot', k: 'noun', m: 'bread' }], p: [] },
-  ]);
-  const r = normalizeVideo(file);
-  if (!r.ok) throw new Error('fixture invalid');
-  const lesson = lessonFromVideo(r.video);
-
-  it('creates a valid lesson from the video', () => {
-    expect(lesson.ok).toBe(true);
-  });
-  it('turns content words into items with dictionary form and article', () => {
-    if (!lesson.ok) return;
-    const byId = Object.fromEntries(lesson.lesson.items.map((i) => [i.id, i]));
-    expect(byId.brot).toMatchObject({ de: 'Brot', article: 'das', kind: 'noun', en: 'bread' });
-    expect(byId.kaufen).toMatchObject({ de: 'kaufen', kind: 'verb', en: 'buy' });
-    expect(byId.aufstehen).toMatchObject({ kind: 'verb', en: 'gets up' });
-    expect(byId['ich']).toBeUndefined(); // pronoun / basic word
-    expect(byId['das']).toBeUndefined(); // article
-    expect(lesson.lesson.items.filter((i) => i.id === 'kaufen')).toHaveLength(1); // repeated word appears once
-  });
-  it('turns phrases into phrase items with their explanation', () => {
-    if (!lesson.ok) return;
-    expect(lesson.lesson.items.find((i) => i.kind === 'phrase')).toMatchObject({ de: 'Wie geht es dir?', en: 'How are you?', notes: 'literally: how goes it to you' });
-  });
-  it('is words only: spoken lines are not used as examples or exercises', () => {
-    if (!lesson.ok) return;
-    // Before, every word carried its line as an example, so one line showed up once per word.
-    expect(lesson.lesson.items.every((i) => !i.example)).toBe(true);
-    expect(lesson.lesson.items.some((i) => i.kind === 'sentence')).toBe(false);
-    expect(lesson.lesson.exercises).toHaveLength(0);
-    expect(lesson.lesson.id).toBe('video-kRq3WzSwUw0');
   });
 });

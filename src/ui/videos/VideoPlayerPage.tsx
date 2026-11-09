@@ -4,7 +4,6 @@ import {
   Eye,
   EyeOff,
   Gauge,
-  GraduationCap,
   Maximize,
   Minimize,
   Pause,
@@ -18,11 +17,10 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildLexicon } from '../../core/vocab';
-import { stringify as toYaml } from 'yaml';
-import { activeIndex, annotateLine, formatTimestamp, lessonFromVideo, toSrt, type GlossEntry, type Part, type VideoSegment } from '../../core/video';
-import { db, saveLesson, type VideoRow } from '../../db';
+import { activeIndex, annotateLine, formatTimestamp, toSrt, type GlossEntry, type Part, type VideoSegment } from '../../core/video';
+import { db, type VideoRow } from '../../db';
 import { SpeakButton } from '../components';
-import { href, navigate, useAsync, useKeys } from '../hooks';
+import { href, useAsync, useKeys } from '../hooks';
 import { AnnotatedText } from './AnnotatedText';
 import { PlayerState, describePlayerError, loadYouTubeApi, type YTPlayer } from './youtube';
 
@@ -252,19 +250,6 @@ function Player({ video, lexicon }: { video: VideoRow; lexicon: ReturnType<typeo
     [lexicon],
   );
   const annotated = useMemo(() => (seg ? annotateLine(seg.text, seg.glossary.map(glossText), lookup) : null), [seg, lookup]);
-  const [lessonError, setLessonError] = useState<string | null>(null);
-  const createLesson = async () => {
-    const r = lessonFromVideo(video);
-    if (!r.ok) return setLessonError(r.errors.join('\n'));
-    await saveLesson(db, r.lesson);
-    navigate(href(`lessons/${r.lesson.id}`));
-  };
-  const downloadLesson = () => {
-    const r = lessonFromVideo(video);
-    if (!r.ok) return setLessonError(r.errors.join('\n'));
-    const { id, title, tags, source, items, exercises } = r.lesson;
-    download(`${id}.yaml`, toYaml({ schema_version: 1, id, title, tags, source, items, exercises }));
-  };
 
   return (
     <>
@@ -376,16 +361,7 @@ function Player({ video, lexicon }: { video: VideoRow; lexicon: ReturnType<typeo
               <h1 className="vid-title">{video.title}</h1>
               <div className="muted">{video.channel}</div>
             </div>
-            <div className="row">
-              <button className="btn primary sm" title="Learn this video's words and phrases as a lesson" onClick={() => void createLesson()}>
-                <GraduationCap size={16} /> Create lesson
-              </button>
-              <button className="btn sm" title="Download as a lesson file (.yaml)" onClick={downloadLesson}>
-                <Download size={16} /> Lesson file
-              </button>
-            </div>
           </div>
-          {lessonError && <p className="err small">{lessonError}</p>}
         </div>
 
         <aside className="vid-side">

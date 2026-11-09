@@ -5,4 +5,3 @@ export * from './prompt';
 export * from './build';
 export * from './annotate';
 export * from './importer';
-export * from './lesson';
