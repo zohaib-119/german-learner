@@ -1,4 +1,4 @@
-import { Clapperboard, FileUp, Languages, LayoutDashboard, Library, SlidersHorizontal } from 'lucide-react';
+import { Clapperboard, Languages, LayoutDashboard, Library, SlidersHorizontal } from 'lucide-react';
 import { useEffect, type ComponentType } from 'react';
 import type { Stage } from '../core/session';
 import { HomePage } from './HomePage';
@@ -16,13 +16,14 @@ const NAV: { id: string; label: string; to: string; icon: ComponentType<{ size?:
   { id: '', label: 'Home', to: href(''), icon: LayoutDashboard },
   { id: 'lessons', label: 'Lessons', to: href('lessons'), icon: Library },
   { id: 'videos', label: 'Videos', to: href('videos'), icon: Clapperboard },
-  { id: 'import', label: 'Import', to: href('import'), icon: FileUp },
   { id: 'settings', label: 'Settings', to: href('settings'), icon: SlidersHorizontal },
 ];
 
 export function App() {
   const route = useRoute();
   const [section = '', arg] = route.path;
+  // The Import page is opened from Lessons, so Lessons stays highlighted there.
+  const navSection = section === 'import' ? 'lessons' : section;
 
   // Subtitles sent by the browser extension land here and open straight in the player.
   useEffect(() => installExtensionBridge((id) => navigate(href(`videos/${id}`))), []);
@@ -44,7 +45,7 @@ export function App() {
         </a>
         <nav>
           {NAV.map(({ id, label, to, icon: Icon }) => (
-            <a key={id} href={to} className={`nav-link ${section === id ? 'active' : ''}`} aria-current={section === id ? 'page' : undefined}>
+            <a key={id} href={to} className={`nav-link ${navSection === id ? 'active' : ''}`} aria-current={navSection === id ? 'page' : undefined}>
               <Icon size={20} />
               <span>{label}</span>
             </a>
