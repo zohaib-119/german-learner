@@ -69,6 +69,14 @@ export function ImportPage() {
         </label>
       </div>
 
+      {staged.filter((s) => s.result.ok && !s.saved).length > 1 && (
+        <div className="row import-all">
+          <button className="btn primary" onClick={() => staged.forEach((s, i) => s.result.ok && !s.saved && void confirm(i))}>
+            Import all ({staged.filter((s) => s.result.ok && !s.saved).length})
+          </button>
+        </div>
+      )}
+
       {staged.map((s, i) => (
         <article key={s.fileName + i} className="card result">
           <div className="result-head">
