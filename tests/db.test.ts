@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { AppDB, deleteLesson, saveLesson } from '../src/db';
+import { AppDB, deleteLesson, getVideo, saveLesson } from '../src/db';
 import { importLessonText } from '../src/core/importer';
 import { newCard } from '../src/core/srs';
 
@@ -58,5 +58,15 @@ describe('saveLesson', () => {
     await deleteLesson(db, 'l1');
     expect(await db.items.count()).toBe(0);
     expect(await db.lessons.count()).toBe(0);
+  });
+});
+
+describe('getVideo', () => {
+  it('fills in lists missing from videos saved by older versions', async () => {
+    const old = { kind: 'video', schema_version: 1, id: 'yt-old', title: 'Old', video: { provider: 'youtube', id: 'abcdefghijk' }, language: 'de', translation_language: 'en', createdAt: 1, segments: [{ start: 0, end: 2, text: 'Hallo' }] };
+    await db.videos.put(old as never);
+    const v = await getVideo(db, 'yt-old');
+    expect(v?.segments[0]).toMatchObject({ text: 'Hallo', glossary: [], phrases: [] });
+    expect(await getVideo(db, 'nope')).toBeUndefined();
   });
 });

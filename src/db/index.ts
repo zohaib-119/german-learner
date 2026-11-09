@@ -166,6 +166,16 @@ export async function saveVideo(database: AppDB, video: VideoFile): Promise<Vide
   return row;
 }
 
+/**
+ * Reads a video, filling in fields added after it was saved (older rows have no `phrases`, and may lack
+ * `glossary`), so the player never meets a missing list.
+ */
+export async function getVideo(database: AppDB, id: string): Promise<VideoRow | undefined> {
+  const row = await database.videos.get(id);
+  if (!row) return undefined;
+  return { ...row, segments: row.segments.map((s) => ({ ...s, glossary: s.glossary ?? [], phrases: s.phrases ?? [] })) };
+}
+
 export async function deleteVideo(database: AppDB, id: string): Promise<void> {
   await database.videos.delete(id);
 }

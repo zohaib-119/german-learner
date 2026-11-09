@@ -18,7 +18,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildLexicon } from '../../core/vocab';
 import { activeIndex, annotateLine, formatTimestamp, toSrt, type GlossEntry, type Part, type VideoSegment } from '../../core/video';
-import { db, type VideoRow } from '../../db';
+import { db, getVideo, type VideoRow } from '../../db';
 import { SpeakButton } from '../components';
 import { href, useAsync, useKeys } from '../hooks';
 import { AnnotatedText } from './AnnotatedText';
@@ -42,7 +42,7 @@ function download(name: string, text: string) {
 
 export function VideoPlayerPage({ videoId }: { videoId: string }) {
   const { data, loading } = useAsync(async () => {
-    const video = await db.videos.get(videoId);
+    const video = await getVideo(db, videoId);
     const items = await db.items.toArray();
     return { video, lexicon: buildLexicon(items) };
   }, [videoId]);
