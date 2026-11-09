@@ -26,7 +26,7 @@ export function App() {
   const navSection = section === 'import' ? 'lessons' : section;
 
   // Subtitles sent by the browser extension land here and open straight in the player.
-  useEffect(() => installExtensionBridge((id) => navigate(href(`videos/${id}`))), []);
+  useEffect(() => installExtensionBridge(({ kind, id }) => navigate(href(kind === 'video' ? `videos/${id}` : `lessons/${id}`))), []);
 
   // Study sessions are full screen, without the app chrome.
   if (section === 'study') {
