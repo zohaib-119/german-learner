@@ -291,5 +291,5 @@ exercises:
       - "Ich bestelle Brot, weil ich Hunger habe."
 ```
 
-A larger working sample is in `sample-lessons/bakery-vocab.yaml`, and a CSV sample in
-`sample-lessons/everyday-expressions.csv`.
+A larger working sample is in [`sample-lessons/bakery-vocab.yaml`](../sample-lessons/bakery-vocab.yaml), and a CSV sample in
+[`sample-lessons/everyday-expressions.csv`](../sample-lessons/everyday-expressions.csv).

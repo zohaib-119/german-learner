@@ -1,7 +1,7 @@
 // The job page: runs one pipeline for a YouTube tab and shows its progress. Two independent jobs:
 //   subtitles (default): transcript -> AI chat (chunk by chunk) -> validated subtitle file -> Videos
-//   lesson (?kind=lesson): transcript + LESSON_FORMAT.md -> AI chat -> validated lesson file -> Lessons
-import lessonGuide from '../../LESSON_FORMAT.md';
+//   lesson (?kind=lesson): transcript + docs/LESSON_FORMAT.md -> AI chat -> validated lesson file -> Lessons
+import lessonGuide from '../../docs/LESSON_FORMAT.md';
 import { buildLessonFixPrompt, buildLessonPrompt, parseLessonReply, type LessonReply } from '../../src/core/lesson-ai';
 import { buildVideoFile } from '../../src/core/video/build';
 import { mergeCues, type Line } from '../../src/core/video/lines';

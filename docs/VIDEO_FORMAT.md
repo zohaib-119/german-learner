@@ -1,6 +1,6 @@
 # Video Subtitle Format (schema_version 1)
 
-The **Videos** page plays a YouTube video with learning subtitles: the original line, its translation, and short meanings for every word. These files are made by the browser extension (see `extension/README.md`), which hands them straight to the app; the Videos page has no file import. This page describes the format the extension produces and the app validates.
+The **Videos** page plays a YouTube video with learning subtitles: the original line, its translation, and short meanings for every word. These files are made by the browser extension (see [extension/README.md](../extension/README.md)), which hands them straight to the app; the Videos page has no file import. This page describes the format the extension produces and the app validates.
 
 ## Format
 

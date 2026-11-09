@@ -1,4 +1,4 @@
-// Making a normal lesson (LESSON_FORMAT.md) from a video's transcript with an AI chat.
+// Making a normal lesson (docs/LESSON_FORMAT.md) from a video's transcript with an AI chat.
 // Used by the browser extension's "Create lesson" job; the result is imported like any lesson file.
 // This is separate from the video subtitle files: a lesson is written by the AI from the transcript,
 // with proper written example sentences and exercises, instead of reusing spoken lines.
@@ -6,7 +6,7 @@ import { parse as parseYaml } from 'yaml';
 import { importLessonText, type ImportResult } from './importer';
 
 export interface LessonPromptInput {
-  /** The full text of LESSON_FORMAT.md. */
+  /** The full text of docs/LESSON_FORMAT.md. */
   guide: string;
   /** The video's transcript as plain text, one line per subtitle line. */
   transcript: string;

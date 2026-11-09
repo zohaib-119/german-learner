@@ -1,7 +1,7 @@
 /** Messages between the job page and the content scripts. */
 export type AiAsk = { type: 'ai:ask'; prompt: string; timeoutMs?: number };
 export type AiPing = { type: 'ai:ping' };
-/** `video`: subtitle file (object). `lesson`: lesson file text (LESSON_FORMAT.md). */
+/** `video`: subtitle file (object). `lesson`: lesson file text (docs/LESSON_FORMAT.md). */
 export type DeliverKind = 'video' | 'lesson';
 export type AppDeliver = { type: 'app:deliver'; payload: unknown; kind?: DeliverKind };
 export type AppPing = { type: 'app:ping' };
