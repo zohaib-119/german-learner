@@ -69,7 +69,7 @@ The commands below are for **Linux and macOS**. Windows differences are noted wh
 ### Step 1: Get the code and install it
 
 ```bash
-git clone <your-repo-url> german-learner
+git clone https://github.com/zohaib-119/german-learner.git
 cd german-learner
 npm install
 ```
