@@ -1,20 +1,22 @@
-# Deutsch Trainer – Video Subtitles (browser extension)
+# German Learner – browser extension
 
-Turns any YouTube video into **learning subtitles** or a **lesson** in a few clicks, using the AI chat you are already logged in to (ChatGPT or Claude). No API keys. The two are separate jobs; make either or both.
+Turns any German YouTube video into **learning subtitles** or a **lesson** for the German Learner app in a few clicks, using the AI chat you are already logged in to (ChatGPT or Claude). No API keys. The two are separate jobs; make either or both.
+
+<img src="../docs/screenshots/extension-popup.png" alt="The extension popup on a YouTube video" width="300">
 
 **Create subtitles for this video:**
 
 1. **Transcript.** It opens YouTube's own *Show transcript* panel in your tab and reads the timed lines.
-2. **AI.** It opens a new chat (ChatGPT or Claude), pastes the lines in parts with instructions, and waits for each answer. The answer contains a translation of every line and short meanings for the words a learner at your level may not know. If a line is missing from an answer, it asks again for just that line.
+2. **AI.** It opens a new chat (ChatGPT or Claude), pastes the lines in parts with instructions, and waits for each answer. The answer contains a translation of every line, the meaning of every word (with its dictionary form, repeats included) and the fixed phrases explained as a whole. With *Only harder words* in Settings it explains just the words a learner at your level may not know. If a line is missing from an answer, it asks again for just that line.
 3. **Build.** It combines the answers with the original lines. **Timing and German text always come from YouTube, never from the AI**, so the subtitles stay in sync. The result is checked against the same format the app uses.
-4. **App.** It opens Deutsch Trainer's **Videos** page and hands the subtitles over. The video starts in the player with hover-for-meaning subtitles.
+4. **App.** It opens the app's **Videos** page and hands the subtitles over. The video starts in the player with hover-for-meaning subtitles.
 
 You can watch the progress on the extension's job page, which also lets you download the result as `.json` or `.srt`.
 
 **Create a lesson from this video:**
 
 1. **Transcript**, as above.
-2. **AI.** One message with the whole transcript and the app's lesson format guide (`LESSON_FORMAT.md`, built into the extension). The AI picks the useful words and phrases, writes proper written example sentences (spoken lines are often not good examples) and exercises, at your level.
+2. **AI.** One message with the whole transcript and the app's lesson format guide ([docs/LESSON_FORMAT.md](../docs/LESSON_FORMAT.md), built into the extension). The AI picks the useful words and phrases, writes proper written example sentences (spoken lines are often not good examples) and exercises, at your level.
 3. **Check.** The answer is validated with the app's own lesson importer. If it has errors, or uses words in sentences that are not items, the AI is asked once to fix them.
 4. **App.** The lesson opens under **Lessons**, like an imported lesson file. Its id is `yt-<video id>`, so making it again updates the same lesson and keeps your progress on unchanged words. The job page also offers the lesson as a `.json` file.
 
@@ -48,6 +50,8 @@ Every finished video is saved in the extension's own library (in your browser), 
 ### Settings
 
 Open them from the popup (**Settings**) or at the bottom of the job page.
+
+![Extension settings](../docs/screenshots/extension-settings.png)
 
 | Setting | Default | Notes |
 | --- | --- | --- |

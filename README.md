@@ -1,63 +1,76 @@
-# Deutsch Trainer
+# German Learner
 
-A personal, local-first German trainer built around **your own lessons**. You bring the material (words, example sentences, exercises) in a simple file; the app turns it into practice focused on **recognising words when you read them and when you hear them**, backed by spaced repetition and natural-sounding text-to-speech that runs on your own machine.
+A personal, local-first app for learning German. You learn the **words first**, by **reading** them and by **hearing** them, with spaced repetition and natural-sounding speech that runs on your own computer. Then you watch real **YouTube videos with learning subtitles**: every line with its translation and the meaning of every word.
 
-There are no accounts and no cloud services to depend on. Your lessons and progress stay in your browser.
+Lessons and subtitles come from a small browser extension that uses the AI chat you are already logged in to (ChatGPT or Claude). No accounts, no API keys, no cloud service: your lessons, videos and progress stay in your browser.
 
-| Home | Lesson |
-| :--: | :--: |
-| ![Home](docs/screenshots/home.png) | ![Lesson](docs/screenshots/lesson.png) |
+![Home](docs/screenshots/home.png)
 
 ## Why it exists
 
-Learning from comprehensible input (videos, podcasts) stalls when you do not know enough words to follow along. This app closes that gap:
+Learning from comprehensible input (videos, stories, podcasts) stalls when you don't know enough words to follow along. This app closes that gap:
 
-- **Learn from what you actually watch.** The browser extension turns a YouTube video into a lesson (written by your AI chat in the lesson format) or into learning subtitles to watch it with.
-- **Words before sentences.** You are assumed to know almost no vocabulary, so every content word is learned first. Sentences and exercises unlock only after most of a lesson's words are learned.
+- **Learn from what you actually watch.** Turn a YouTube video into a lesson with its useful words and phrases, learn them, then watch the video with subtitles that explain every word.
+- **Words before sentences.** You are assumed to know almost no German, so every content word is learned first. Sentences and exercises unlock only after most of a lesson's words are learned.
 - **Recognition first.** The main path is *reading* a word and recalling its meaning, and *hearing* a word and recalling its meaning. Typing (spelling) is a separate, optional practice.
-- **Listening is central.** Every word and sentence can be played at normal or slow speed, on repeat, with audio generated locally.
-- **Repetition that adapts.** Cards come back on a spaced-repetition schedule ([FSRS](https://github.com/open-spaced-repetition/ts-fsrs)), so things you struggle with return sooner.
+- **Listening is central.** Every word and sentence can be played at normal or slow speed, on repeat.
+- **Repetition that adapts.** Cards come back on a spaced-repetition schedule ([FSRS](https://github.com/open-spaced-repetition/ts-fsrs)), so what you struggle with returns sooner.
 
-## Screenshots
+## A tour
+
+| Lessons | A lesson |
+| :--: | :--: |
+| ![Lessons](docs/screenshots/lessons.png) | ![Lesson](docs/screenshots/lesson.png) |
+
+**Learning words.** Each new word is shown with its article (colour-coded *der* / *die* / *das*), meaning, plural and an example sentence, and spoken aloud. It then returns as reading and listening cards that you rate yourself.
 
 | Meeting a new word | Reading: recall the meaning |
 | :--: | :--: |
-| ![Intro](docs/screenshots/intro.png) | ![Reading](docs/screenshots/reading.png) |
+| ![New word](docs/screenshots/intro.png) | ![Reading](docs/screenshots/reading.png) |
 
-| Listening: hear it, recall the meaning | Listen and choose (exercise) |
+| Listening: hear it, recall the meaning | Optional spelling practice |
 | :--: | :--: |
-| ![Listening](docs/screenshots/listening.png) | ![Listen and choose](docs/screenshots/listen-choose.png) |
+| ![Listening](docs/screenshots/listening.png) | ![Spelling](docs/screenshots/spelling.png) |
 
-| Put the sentence in order | Optional spelling practice |
+**Sentences and exercises** unlock when most of a lesson's words are learned.
+
+| Listen and choose | Put the sentence in order |
 | :--: | :--: |
-| ![Word order](docs/screenshots/word-order.png) | ![Spelling](docs/screenshots/spelling.png) |
+| ![Listen and choose](docs/screenshots/listen-choose.png) | ![Word order](docs/screenshots/word-order.png) |
 
-| Importing lesson files | Settings |
+**Videos.** Every subtitle line sits under the video with its translation. Hover a word for its meaning in that sentence and its dictionary form; fixed phrases are explained as a whole, with why they mean what they mean.
+
+![Video player](docs/screenshots/video-player.png)
+
+| Your videos | The browser extension |
 | :--: | :--: |
-| ![Import](docs/screenshots/import.png) | ![Settings](docs/screenshots/settings.png) |
+| ![Videos](docs/screenshots/videos.png) | <img src="docs/screenshots/extension-popup.png" alt="Extension popup" width="300"> |
 
-Works on a phone-sized screen too:
+It works on a phone-sized screen too:
 
-<img src="docs/screenshots/mobile-reading.png" alt="Mobile layout" width="260">
+| | | |
+| :--: | :--: | :--: |
+| <img src="docs/screenshots/mobile-home.png" alt="Home on a phone" width="250"> | <img src="docs/screenshots/mobile-reading.png" alt="Reading card on a phone" width="250"> | <img src="docs/screenshots/mobile-video.png" alt="Video player on a phone" width="250"> |
 
 ## Quick start
 
 ### Requirements
 
 - **Node.js** 20.19+ or 22.12+ (developed on Node 24)
-- **Python 3.12** for the local voice service (any Python that can install `piper-tts` works; I used 3.12 via [uv](https://docs.astral.sh/uv/))
+- **Python 3.12** for the local voice service (any Python that can install `piper-tts` works; [uv](https://docs.astral.sh/uv/) makes it easy)
+- **Chrome, Edge or Brave** for the browser extension
 
 ### 1. Install the app
 
 ```bash
-git clone <your-repo-url> deutsch-trainer
-cd deutsch-trainer
+git clone <your-repo-url> german-learner
+cd german-learner
 npm install
 ```
 
 ### 2. Set up the voice service (once)
 
-The app speaks German through a tiny local server (`tts-service/`) that runs the Piper voice model offline and, optionally, Microsoft Edge voices.
+The app speaks German through a small local server (`tts-service/`) that runs the Piper voice model offline and, optionally, Microsoft Edge voices.
 
 ```bash
 # from the project root
@@ -83,57 +96,39 @@ Open <http://localhost:5173>. If the voice service is not running, the app keeps
 
 > Your progress is stored per browser **and per address**. `localhost:5173` and `localhost:5174` do not share data, so keep using the same one.
 
-## How to use it
+### 4. Install the browser extension
 
-### 1. Prepare a lesson file
-
-A lesson is one YAML (or CSV) file with your words and, optionally, example sentences and exercises:
-
-```yaml
-id: yt-bakery-01
-title: "Easy German – At the bakery"
-tags: [video, a1, food]
-
-items:
-  - kind: noun
-    de: Brot
-    article: das
-    plural: Brote
-    en: bread
-    example: { de: "Ich hätte gern ein Brot.", en: "I would like a loaf of bread." }
-  - { kind: verb, de: bestellen, en: to order, forms: { er: bestellt } }
-
-exercises:
-  - type: listen_choose
-    audio: "Ich hätte gern ein Brot."
-    options: ["I would like a loaf of bread.", "I am hungry."]
-    correct: 0
-  - type: word_order
-    prompt_en: "I would like a loaf of bread."
-    tokens: [Ich, hätte, gern, ein, Brot]
-    answers: ["Ich hätte gern ein Brot"]
+```bash
+npm run ext:build      # builds into extension/dist
 ```
 
-The complete reference (all fields, exercise types, CSV format, tips and a ready-to-use prompt for generating lessons with a tool of your choice) is in **[LESSON_FORMAT.md](LESSON_FORMAT.md)**. Working samples are in [`sample-lessons/`](sample-lessons/).
+Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose `extension/dist`. Details are in [extension/README.md](extension/README.md).
 
-One rule makes the learning order work: **every content word used in a sentence or exercise should also be a word item.** The importer warns you when one is missing.
+## How to use it
 
-### 2. Import it
+### 1. Get lessons
 
-On **Lessons**, press **Import**, drop one or more `.yaml` / `.json` / `.csv` files, check the preview (counts and warnings) and press **Import**. If the voice service is running, audio for every word, example and exercise answer is generated right away, so practice never waits. Importing a file with an existing lesson `id` updates that lesson and keeps your progress on unchanged items.
+A lesson is a list of German words and phrases, with example sentences and exercises. There are two ways to get one:
 
-### 3. Learn the words
+- **From a YouTube video (extension).** Open the video, click the extension and choose **Create a lesson from this video**. Your AI chat receives the transcript together with the [lesson format guide](docs/LESSON_FORMAT.md) and writes the lesson: the useful words and phrases, proper written example sentences (spoken lines are often not good examples) and exercises at your level. The extension checks the result with the app's own importer, asks the AI to fix any problems, and opens the lesson in the app. Doing it again for the same video updates that lesson.
+- **From a lesson file.** On **Lessons**, press **Import** and drop `.yaml`, `.json` or `.csv` files you wrote yourself or with any AI tool. The preview shows counts and warnings before you import.
 
-Open a lesson and press **Words**. Each new word is shown with its article, plural, meaning and example, and spoken aloud. It then comes back as:
+![Import](docs/screenshots/import.png)
 
-- **Reading** – you see the German word, think of the meaning, press *Show answer*.
-- **Listening** – you only hear the word, think of the meaning, press *Show answer*.
+The lesson file format (all fields, exercise types, CSV, and a ready-to-paste prompt) is described in **[docs/LESSON_FORMAT.md](docs/LESSON_FORMAT.md)**. Working samples are in [`sample-lessons/`](sample-lessons/). One rule makes the learning order work: **every content word used in a sentence or exercise should also be a word in the lesson.** The importer warns you when one is missing.
 
-Rate yourself **Again / Hard / Good / Easy**; the button shows when the card will return. A word counts as *learned* once it has passed its short learning steps.
+If the voice service is running, audio for every word, example and exercise is generated as soon as a lesson arrives, so practice never waits.
 
-Not in the mood for a card? **Skip** (top right of any study screen) sets it aside for this session only. Nothing is recorded, so it simply comes back next time.
+### 2. Learn the words
 
-### 4. Drill what you want
+Open a lesson and press **Start** (or **Words** on its card). Each new word is introduced, then comes back as:
+
+- **Reading**: you see the German word, think of the meaning, press *Show answer*.
+- **Listening**: you only hear the word, think of the meaning, press *Show answer*.
+
+Rate yourself **Again / Hard / Good / Easy**; each button shows when the card will return. A word counts as *learned* once it has passed its short learning steps. **Skip** (top right of any study screen) sets a card aside for this session only.
+
+### 3. Drill what you want
 
 Each lesson has a **Practice** row:
 
@@ -143,54 +138,32 @@ Each lesson has a **Practice** row:
 | **Listening** | Only hear → meaning cards |
 | **Spelling** *(optional)* | Type the German word (from the English meaning, or from what you hear). Only offers words you have already learned and never appears in Review |
 
-Drills show what is due and, if little is due, top up with the next cards so you can practise ahead.
+### 4. Move on to sentences
 
-### 5. Move on to sentences
+When about **80 %** of a lesson's words are learned, **Sentences** unlocks (or press *Unlock* to go ahead). It covers listening to each word's example sentence, and the lesson's exercises: **listen and choose**, **multiple choice**, **put in order**, **fill in the blank** and **translate**. Hover any word you know in a sentence for its meaning. After each answer you hear the correct sentence and see the explanation.
 
-When about **80 %** of a lesson's words are learned, **Sentences** unlocks (or press *Unlock* to skip ahead). It covers:
+### 5. Review daily
 
-- listening to the example sentence of each word, then seeing its meaning
-- your exercises: **listen and choose**, **multiple choice**, **put in order**, **fill in the blank**, **translate**
+**Home** shows how many cards are due across all lessons that are *in review* (the switch on each lesson). **Review** mixes reading, listening and sentence cards. Spelling is never included.
 
-Hover or focus any known word in a sentence to see its meaning, or press **Words** in an exercise to see the vocabulary it uses. After each answer you hear the correct sentence and see your explanation.
+### 6. Watch videos with learning subtitles
 
-### 6. Review daily
+On a YouTube video, click the extension and choose **Create subtitles for this video**. It reads the video's own transcript, asks your AI chat for a translation of every line and the meaning of every word (with its dictionary form) and phrase, and opens the result under **Videos**. Timing and the German text always come from YouTube; the AI only adds translations and meanings. Finished videos are saved, so they are never made twice.
 
-The **Home** page shows how many cards are due across all enabled lessons. **Review** mixes reading, listening and sentence cards. Spelling is never included.
+In the player you can show or hide the translation, replay or loop a line, pause after every line, slow down to 0.5×, and go fullscreen with the subtitles still visible. Words you have learned in your lessons are underlined in green.
+
+Subtitles and lessons are separate: make either or both for a video. The subtitle file format is described in [docs/VIDEO_FORMAT.md](docs/VIDEO_FORMAT.md).
 
 ### Keyboard shortcuts
 
-| Key | Action |
+| Key | While studying |
 | --- | --- |
 | `Enter` | Show answer / check / continue |
 | `Space` | Replay the audio |
-| `1` – `4` | Rate a card (Again, Hard, Good, Easy), or pick an answer in multiple-choice exercises |
+| `1` – `4` | Rate a card (Again, Hard, Good, Easy), or pick an answer |
 | `Backspace` | Remove the last word in a word-order exercise |
 
-On-screen buttons for **ä ö ü ß** are available wherever you type.
-
-### Settings
-
-- **Voice:** Piper (offline, default) or Edge (more natural, needs internet; uses an unofficial service that could change). If one fails, the other is tried.
-- **New words per session**, **auto-play audio**, and **strict capitalization** (off by default, so `brot` is accepted for `Brot`; umlauts may be typed as `ae/oe/ue/ss`).
-
-## Videos: learn from YouTube
-
-The **Videos** tab plays YouTube videos with learning subtitles. Each line is shown under the video; hover a word to see its meaning, show the translation when you need it, and replay, loop or slow down a line.
-
-![Video player](docs/screenshots/video-player.png)
-
-The subtitles are created by the browser extension in [`extension/`](extension/README.md):
-
-1. Open a YouTube video and click the extension (or right-click the page).
-2. It reads the video's transcript and asks your AI chat (ChatGPT or Claude, the account you're already logged in to) for translations and word meanings, a part at a time.
-3. It opens the result in the app. Timing and the original text always come from YouTube; the AI only adds translations and meanings.
-
-**Lessons from videos are a separate job.** In the extension, **Create a lesson from this video** sends the transcript together with [LESSON_FORMAT.md](LESSON_FORMAT.md) to your AI chat, which writes a normal lesson: the useful words and phrases, proper written example sentences and exercises. The extension checks it with the same importer as a lesson file (and asks the AI to fix any problems), then opens it under **Lessons**. Subtitles and lessons don't depend on each other; make either or both.
-
-The extension needs no API key. Setup and troubleshooting are in [extension/README.md](extension/README.md). The subtitle file format is described in [VIDEO_FORMAT.md](VIDEO_FORMAT.md).
-
-| Key | In the player |
+| Key | In the video player |
 | --- | --- |
 | `Space` | Play / pause |
 | `←` `→` | Previous / next line |
@@ -199,7 +172,16 @@ The extension needs no API key. Setup and troubleshooting are in [extension/READ
 | `A` | Pause after each line |
 | `T` | Show / hide the translation |
 
-Videos are embedded with YouTube's official player. The subtitles sit below it, never over it, and fullscreen keeps them visible.
+On-screen buttons for **ä ö ü ß** are available wherever you type.
+
+### Settings
+
+![Settings](docs/screenshots/settings.png)
+
+- **Voice:** Piper (offline, default) or Edge (more natural, needs internet; uses an unofficial service that could change). If one fails, the other is tried.
+- **New words per session**, **auto-play audio**, and **strict capitalization** (off by default, so `brot` is accepted for `Brot`; umlauts may be typed as `ae/oe/ue/ss`).
+
+The extension has its own settings (your level, how many words to explain, ChatGPT or Claude, the app address): see [extension/README.md](extension/README.md).
 
 ## Configuration
 
@@ -213,28 +195,29 @@ VITE_TTS_URL=http://localhost:8787
 
 ```
 src/
-  core/        schema, importer (YAML/CSV), grading, spaced repetition, session builder, vocabulary lookup
-  db/          IndexedDB (Dexie) tables and progress queries
-  audio/       text-to-speech engines, player, settings
-  exercises/   one component per exercise type + registry
-  core/video/  video subtitle format, transcript parsing, AI prompt and reply parsing (shared with the extension)
-  ui/          pages, study screens, styles
-extension/     browser extension that creates video subtitles (see extension/README.md)
-e2e/           browser tests for the video player and the extension
-tts-service/   local FastAPI voice server (Piper, Edge) with an on-disk audio cache
-sample-lessons/  example lessons
-docs/screenshots/
-tests/         Vitest tests
+  core/          lesson schema, importer (YAML/JSON/CSV), grading, spaced repetition, sessions, vocabulary lookup
+  core/video/    subtitle format, transcript parsing, AI prompt and reply parsing (shared with the extension)
+  core/lesson-ai.ts   prompt and answer checking for lessons written from a transcript (used by the extension)
+  db/            IndexedDB (Dexie) tables and progress queries
+  audio/         text-to-speech engines, player, settings
+  exercises/     one component per exercise type
+  ui/            pages, study screens, video player, styles
+extension/       browser extension: subtitles and lessons from YouTube videos (see extension/README.md)
+tts-service/     local voice server (FastAPI, Piper, Edge) with an on-disk audio cache
+docs/            LESSON_FORMAT.md, VIDEO_FORMAT.md, screenshots
+sample-lessons/  example lesson files
+tests/           unit tests (Vitest)
+e2e/             browser tests for the video player and the extension
 ```
 
-Adding an exercise type means: a schema in `src/core/schema`, a component registered in `src/exercises`, and a short section in `LESSON_FORMAT.md`.
+Adding an exercise type means: a schema in `src/core/schema`, a component in `src/exercises`, and a short section in `docs/LESSON_FORMAT.md` (which the extension also sends to the AI).
 
 ## Development
 
 ```bash
 npm run dev        # app with hot reload
 npm run tts        # voice service
-npm test           # unit tests (schema, importer, grading, scheduling, sessions)
+npm test           # unit tests
 npm run typecheck
 npm run build
 
@@ -242,14 +225,16 @@ npm run ext:build          # build the extension into extension/dist
 npm run ext:watch          # rebuild the extension on change
 npm run ext:typecheck
 npm run e2e:video          # browser test of the video player (app running on :5174)
-npm run e2e:extension      # browser test of the whole extension flow against mock pages (app on :5174)
+npm run e2e:extension      # browser test of the extension against local mock pages (app on :5174)
 ```
 
-Built with TypeScript, React, Vite, Dexie, Zod, ts-fsrs and lucide icons; the voice service uses FastAPI, Piper and edge-tts.
+Built with TypeScript, React, Vite, Dexie, Zod, ts-fsrs and lucide icons; the voice service uses FastAPI, Piper and edge-tts; the extension is bundled with esbuild.
 
 ## Your data
 
-Lessons, videos and progress live in your browser's IndexedDB. Generated audio is cached in `tts-service/cache/` (safe to delete; it is regenerated on demand). **There is no backup or export yet, so clearing site data erases your progress.**
+Lessons, videos and progress live in your browser's IndexedDB. Generated audio is cached in `tts-service/cache/` (safe to delete; it is regenerated on demand). **There is no backup or export yet, so clearing the site's data erases your progress.**
+
+Videos are played with YouTube's official embedded player; the subtitles sit below it, never over it. Transcripts are read for your personal use only: don't publish other people's transcripts.
 
 ## Roadmap
 
