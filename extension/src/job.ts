@@ -280,6 +280,7 @@ async function main() {
   await initSettingsForm(params.has('settings') || !tabId);
   if (!tabId) {
     $('#steps').hidden = true;
+    $('#heading-kind').textContent = 'German Learner extension';
     $('#title').textContent = 'Settings';
     return;
   }
